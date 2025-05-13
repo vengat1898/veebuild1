@@ -1,4 +1,11 @@
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, FlatList } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  TextInput,
+  FlatList,
+} from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,25 +15,32 @@ import { useRouter } from 'expo-router';
 
 export default function Search() {
   const navigation = useNavigation();
+  const router = useRouter();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [storeList, setStoreList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const router = useRouter();
 
   const fetchStoreList = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await axios.get('https://veebuilds.com/mobile/searchlist.php');
+      console.log('API Response:', response.data);
+
       if (response.data.result === 'Success') {
         const uniqueStoreList = Array.from(
           new Map(response.data.storeList.map((item) => [item.id, item])).values()
         );
+        console.log('Unique Store List:', uniqueStoreList);
         setStoreList(uniqueStoreList);
       } else {
+        console.error('Failed to load store list from server');
         setError('Failed to load store list');
       }
     } catch (err) {
+      console.error('Fetch Error:', err.message);
       setError('Error fetching data');
     } finally {
       setLoading(false);
@@ -37,9 +51,14 @@ export default function Search() {
     fetchStoreList();
   }, []);
 
-  const filteredStoreList = storeList.filter(store =>
+  const filteredStoreList = storeList.filter((store) =>
     store.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  useEffect(() => {
+    console.log('Search query:', searchQuery);
+    console.log('Filtered results:', filteredStoreList);
+  }, [searchQuery]);
 
   return (
     <View style={styles.container}>
@@ -56,7 +75,7 @@ export default function Search() {
         <Text style={styles.headerTitle}>Search</Text>
       </LinearGradient>
 
-      {/* Search Input with Icon */}
+      {/* Search Input */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={24} color="#aaa" style={styles.searchIcon} />
         <TextInput
@@ -67,24 +86,25 @@ export default function Search() {
         />
       </View>
 
-      {/* Show loading or error messages */}
+      {/* Loading / Error */}
       {loading && <Text style={styles.loadingText}>Loading...</Text>}
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      {/* Show filtered list only after typing */}
+      {/* Results */}
       {searchQuery.length > 0 && (
         <FlatList
           data={filteredStoreList}
-          keyExtractor={(item) => `${item.id}-${item.name}-${item.type}`}  
+          keyExtractor={(item) => `${item.id}-${item.name}-${item.type}`}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.listItem}
-              // onPress={() => {
-              //   // Example action: replace with navigation or custom behavior
-              //   console.log('Tapped store:', item);
-              //   // navigation.navigate('StoreDetail', { store: item });
-              // }}
-              onPress={() =>router.push({ pathname: '/components/Shop', params: { cat_id: item.id } })}
+              onPress={() => {
+                console.log('Tapped store:', item);
+                router.push({
+                  pathname: '/components/Shop',
+                  params: { cat_id: item.id },
+                });
+              }}
             >
               <Text style={styles.listItemText}>{item.name}</Text>
             </TouchableOpacity>
@@ -163,6 +183,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 });
+ 
 
 
 

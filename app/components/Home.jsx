@@ -545,10 +545,10 @@ const styles = StyleSheet.create({
   },
   overlayTopImage: {
     position: 'absolute',
-    top: 70,
-    left: 25,
+    top: 55,
+    left: 22,
     width: '60%',
-    height: '60%',
+    height: '50%',
     borderRadius: 10,
   },
   overlayTextWrapper: {
