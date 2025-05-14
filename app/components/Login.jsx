@@ -165,7 +165,6 @@ export default function Login() {
       );
 
       if (response.data.success == 1) {
-        // Save temporary values for tracking or pre-fill
         await AsyncStorage.setItem('tempMobile', mobileNumber);
         await AsyncStorage.setItem('tempUserId', response.data.userId || '');
 

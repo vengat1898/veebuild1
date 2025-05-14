@@ -1,8 +1,9 @@
 import { StyleSheet, Text, TextInput, View, TouchableOpacity } from 'react-native';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
 
 export default function Profile() {
   const router = useRouter();
@@ -13,14 +14,36 @@ export default function Profile() {
   const [address, setAddress] = useState('');
   const [location, setLocation] = useState('');
 
-  const handleGetLocation = () => {
-    // Dummy location fetching (you can replace this with real geolocation code)
-   
-  };
+  // Replace '1' with a dynamic ID if needed
+  const userId = '2';
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await axios.get(`https://veebuilds.com/mobile/profile_fetch.php?id=${userId}`);
+        if (response.data.success === 1) {
+          const data = response.data;
+          setName(data.name || '');
+          setMobile(data.mobile || '');
+          setEmail(data.email || '');
+          setAddress(data.city || ''); 
+          setLocation(data.location || '');
+        } else {
+          console.log('Failed to fetch profile:', response.data.message);
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+
 
   const handleUpdate = () => {
     console.log('Profile Updated:', { name, mobile, email, address, location });
-    // You can add your update logic here
+  
   };
 
   return (
@@ -68,10 +91,10 @@ export default function Profile() {
         />
 
         {/* Current Location */}
-        <TouchableOpacity onPress={handleGetLocation} style={styles.locationButton}>
+        <TouchableOpacity  style={styles.locationButton}>
           <Text style={styles.locationButtonText}>Get Current Location</Text>
         </TouchableOpacity>
-        <Text style={styles.locationText}>{location}</Text>
+        
 
         {/* Update Button with LinearGradient */}
         <TouchableOpacity onPress={handleUpdate} style={styles.updateButtonWrapper}>
@@ -88,6 +111,7 @@ export default function Profile() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   header: {
