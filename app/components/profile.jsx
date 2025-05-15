@@ -14,7 +14,7 @@ export default function Profile() {
   const [address, setAddress] = useState('');
   const [location, setLocation] = useState('');
 
-  const userId = '2';
+  const userId = '25';
 
   useEffect(() => {
     const fetchProfile = async () => {

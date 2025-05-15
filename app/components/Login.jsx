@@ -1,5 +1,3 @@
-
-
 import {
   StyleSheet,
   Text,
@@ -23,6 +21,7 @@ import logoimg from '../../assets/images/veebuilder.png';
 export default function Login() {
   const router = useRouter();
   const [mobileNumber, setMobileNumber] = useState('');
+  const userType = '1'; 
 
   const handleGetOtp = async () => {
     if (!mobileNumber || mobileNumber.length < 10) {
@@ -32,7 +31,7 @@ export default function Login() {
 
     try {
       const response = await axios.post(
-        `https://veebuilds.com/mobile/login.php?type=vendor&mobile=${mobileNumber}`
+        `https://veebuilds.com/mobile/login.php?type=${userType}&mobile=${mobileNumber}`
       );
 
       if (response.data.success == 1) {
@@ -57,7 +56,10 @@ export default function Login() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}
+    >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
           <Image source={logoimg} style={styles.logo} resizeMode="contain" />
@@ -133,6 +135,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+
+
+
 
 
 

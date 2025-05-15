@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import React, { useRef, useState, useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import otpimg from '../../assets/images/otp.png';
 
@@ -52,12 +53,19 @@ export default function Otp() {
     }
 
     try {
-      // Bypass actual OTP verification, always succeed
-      await AsyncStorage.setItem('mobile', mobile);
-      await AsyncStorage.setItem('userId', userId);
-      await AsyncStorage.setItem('isVerified', 'true');
+      const response = await axios.post(
+        `https://veebuilds.com/mobile/otp_verify.php?type=1&otp=${otpCode}&mobile=${mobile}`
+      );
 
-      router.push('/components/Home');
+      if (response.data.success === 1) {
+        await AsyncStorage.setItem('mobile', mobile);
+        await AsyncStorage.setItem('userId', userId);
+        await AsyncStorage.setItem('isVerified', 'true');
+
+        router.push('/components/Register');
+      } else {
+        Alert.alert('Error', 'Invalid OTP, please try again.');
+      }
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Something went wrong. Please try again.');
@@ -156,13 +164,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
-
-
-
-
-
-
-
-
 

@@ -27,14 +27,12 @@ export default function Register() {
   const [permissionGranted, setPermissionGranted] = useState(false);
   const router = useRouter();
 
-  // Function to handle location permissions and fetch location
   const getLocationPermission = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status === 'granted') {
       setPermissionGranted(true);
       const currentLocation = await Location.getCurrentPositionAsync({});
       setLocation(currentLocation);
-      console.log('Location:', currentLocation);
     } else {
       Alert.alert('Permission Denied', 'Location permission is required.');
     }
@@ -51,8 +49,6 @@ export default function Register() {
       }
     };
     loadMobile();
-
-    // Request location permission on component mount
     getLocationPermission();
   }, []);
 
@@ -67,34 +63,42 @@ export default function Register() {
       return;
     }
 
-    try {
-      const requestData = {
-        mobile,
-        name,
-        email,
-      };
-
-      // Add location data if available
-      if (location) {
-        const { latitude, longitude } = location.coords;
-        requestData.gst_lattitude = latitude.toString();
-        requestData.gst_longitude = longitude.toString();
-
-        // Optionally, get city from coordinates
-        const geocode = await Location.reverseGeocodeAsync({ latitude, longitude });
-        const city = geocode[0]?.city || 'Unknown City';
-        requestData.location = city;  // Set location based on geocoded city
-        requestData.city = city;
-      } else {
-        // Fallback values if location is not available
-        requestData.location = 'Default Location';  // Set a fallback location name
-        requestData.gst_lattitude = '0.0';  // Default latitude
-        requestData.gst_longitude = '0.0';  // Default longitude
-        requestData.city = 'Default City';  // Default city
+    let storedMobile = mobile;
+    if (!storedMobile) {
+      storedMobile = await AsyncStorage.getItem('mobile');
+      if (!storedMobile) {
+        Alert.alert('Missing Mobile', 'Mobile number not found. Please login again.');
+        return;
       }
+      setMobile(storedMobile);
+    }
 
-      console.log('Registering with data:', requestData);
+    const requestData = {
+      mobile: storedMobile,
+      name,
+      email,
+    };
 
+    // Add location info if available
+    if (location) {
+      const { latitude, longitude } = location.coords;
+      requestData.gst_lattitude = latitude.toString();
+      requestData.gst_longitude = longitude.toString();
+
+      const geocode = await Location.reverseGeocodeAsync({ latitude, longitude });
+      const city = geocode[0]?.city || 'Unknown City';
+      requestData.location = city;
+      requestData.city = city;
+    } else {
+      requestData.location = 'Default Location';
+      requestData.gst_lattitude = '0.0';
+      requestData.gst_longitude = '0.0';
+      requestData.city = 'Default City';
+    }
+
+    console.log('Registering with data:', requestData);
+
+    try {
       const response = await axios.get('https://veebuilds.com/mobile/register.php', {
         params: requestData,
       });
@@ -217,6 +221,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+
 
 
 
