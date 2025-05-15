@@ -14,7 +14,6 @@ export default function Profile() {
   const [address, setAddress] = useState('');
   const [location, setLocation] = useState('');
 
-  // Replace '1' with a dynamic ID if needed
   const userId = '2';
 
   useEffect(() => {
