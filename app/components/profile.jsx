@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 export default function Profile() {
   const router = useRouter();
@@ -14,29 +16,36 @@ export default function Profile() {
   const [address, setAddress] = useState('');
   const [location, setLocation] = useState('');
 
-  const userId = '25';
+  const userId = '13';
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await axios.get(`https://veebuilds.com/mobile/profile_fetch.php?id=${userId}`);
-        if (response.data.success === 1) {
-          const data = response.data;
-          setName(data.name || '');
-          setMobile(data.mobile || '');
-          setEmail(data.email || '');
-          setAddress(data.city || ''); 
-          setLocation(data.location || '');
-        } else {
-          console.log('Failed to fetch profile:', response.data.message);
-        }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
+  const fetchProfile = async () => {
+    try {
+      const storedUserId = await AsyncStorage.getItem('user_id');
+      if (!storedUserId) {
+        console.warn('No user ID found');
+        return;
       }
-    };
 
-    fetchProfile();
-  }, []);
+      const response = await axios.get(`https://veebuilds.com/mobile/profile_fetch.php?id=${storedUserId}`);
+      if (response.data.success === 1) {
+        const data = response.data;
+        setName(data.name || '');
+        setMobile(data.mobile || '');
+        setEmail(data.email || '');
+        setAddress(data.city || '');
+        setLocation(data.location || '');
+      } else {
+        console.log('Failed to fetch profile:', response.data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
+  fetchProfile();
+}, []);
+
 
 
 
