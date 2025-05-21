@@ -103,9 +103,15 @@ export default function Register() {
       console.log('API response:', data);
 
       if (data.success === 1) {
-          console.log('Registration success');
-        router.push({ pathname: '/components/Home' });
-      } else {
+  const storeId = data.storeList?.[0]?.id;
+  if (storeId) {
+    await AsyncStorage.setItem('userId', storeId.toString());
+    console.log('User ID saved:', storeId);
+  }
+  console.log('Registration success');
+  router.push({ pathname: '/components/Home' });
+}
+ else {
         Alert.alert('Registration Failed', data.text || 'Please try again.');
       }
     } catch (error) {

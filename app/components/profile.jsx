@@ -1,58 +1,114 @@
-import { StyleSheet, Text, TextInput, View, TouchableOpacity } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+} from 'react-native';
+import * as Location from 'expo-location';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 export default function Profile() {
   const router = useRouter();
 
+  const [userId, setUserId] = useState('');
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
   const [location, setLocation] = useState('');
 
-  const userId = '13';
-
   useEffect(() => {
-  const fetchProfile = async () => {
-    try {
-      const storedUserId = await AsyncStorage.getItem('user_id');
-      if (!storedUserId) {
-        console.warn('No user ID found');
-        return;
+    const fetchProfile = async () => {
+      try {
+        const id = await AsyncStorage.getItem('userId');
+        if (id) {
+          setUserId(id);
+          const response = await axios.get(`https://veebuilds.com/mobile/profile_fetch.php?id=${id}`);
+          if (response.data.success === 1) {
+            const profile = response.data;
+            setName(profile.name);
+            setMobile(profile.mobile);
+            setEmail(profile.email);
+            setLocation(profile.location);
+              await AsyncStorage.setItem('userName', profile.name);
+             await AsyncStorage.setItem('userMobile', profile.mobile);
+          } else {
+            Alert.alert('Error', 'Failed to load profile.');
+          }
+        } else {
+          Alert.alert('Error', 'User ID not found.');
+        }
+      } catch (error) {
+        console.error('Fetch profile error:', error);
+        Alert.alert('Error', 'Could not fetch profile.');
       }
+    };
 
-      const response = await axios.get(`https://veebuilds.com/mobile/profile_fetch.php?id=${storedUserId}`);
-      if (response.data.success === 1) {
-        const data = response.data;
-        setName(data.name || '');
-        setMobile(data.mobile || '');
-        setEmail(data.email || '');
-        setAddress(data.city || '');
-        setLocation(data.location || '');
-      } else {
-        console.log('Failed to fetch profile:', response.data.message);
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
+    fetchProfile();
+  }, []);
+
+
+  const handleGetLocation = async () => {
+  try {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Location permission is required.');
+      return;
     }
-  };
 
-  fetchProfile();
-}, []);
+    let locationData = await Location.getCurrentPositionAsync({});
+    const { latitude, longitude } = locationData.coords;
+
+    // Reverse geocode to get address string
+    let addressArray = await Location.reverseGeocodeAsync({
+      latitude,
+      longitude,
+    });
+
+    if (addressArray.length > 0) {
+      const address = addressArray[0];
+      const formattedAddress = `${address.name || ''}, ${address.street || ''}, ${address.city || ''}, ${address.region || ''}, ${address.postalCode || ''}, ${address.country || ''}`;
+      setLocation(formattedAddress);
+    } else {
+      Alert.alert('Error', 'Unable to fetch address from location.');
+    }
+  } catch (error) {
+    console.error('Location Error:', error);
+    Alert.alert('Error', 'Failed to get current location.');
+  }
+};
 
 
+  const handleUpdate = async () => {
+  if (!name || !mobile || !email || !location) {
+    Alert.alert('Validation Error', 'All fields are required.');
+    return;
+  }
 
+  try {
+    const url = `https://veebuilds.com/mobile/profile_update.php?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}&location=${encodeURIComponent(location)}&cus_id=${userId}`;
 
-  const handleUpdate = () => {
-    console.log('Profile Updated:', { name, mobile, email, address, location });
-  
-  };
+    const response = await axios.get(url);
+    console.log('API Response:', response.data); // <-- Add this
+
+    if (response.data.message === 'Successfully') {
+      Alert.alert('Success', 'Profile updated successfully!');
+    } else {
+      Alert.alert('Update Failed', response.data.message || 'Try again.');
+    }
+  } catch (error) {
+    console.error('Update error:', error);
+    Alert.alert('Error', 'Something went wrong.');
+  }
+};
+
 
   return (
     <View style={{ flex: 1 }}>
@@ -69,121 +125,128 @@ export default function Profile() {
         <Text style={styles.headerTitle}>Profile</Text>
       </LinearGradient>
 
-      {/* Body */}
-      <View style={styles.body}>
+      <ScrollView contentContainerStyle={styles.container}>
         <TextInput
-          placeholder="Name"
           style={styles.input}
+          placeholder="Full Name"
           value={name}
           onChangeText={setName}
         />
         <TextInput
-          placeholder="Mobile Number"
           style={styles.input}
+          placeholder="Mobile Number"
           keyboardType="phone-pad"
           value={mobile}
           onChangeText={setMobile}
         />
         <TextInput
-          placeholder="Email"
           style={styles.input}
+          placeholder="Email"
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
         />
         <TextInput
-          placeholder="Address"
           style={styles.input}
-          value={address}
-          onChangeText={setAddress}
+          placeholder="Address"
+          value={location}
+          onChangeText={setLocation}
         />
 
-        {/* Current Location */}
-        <TouchableOpacity  style={styles.locationButton}>
-          <Text style={styles.locationButtonText}>Get Current Location</Text>
-        </TouchableOpacity>
-        
+        <TouchableOpacity onPress={handleGetLocation} style={styles.locationButton}>
+         <Text style={styles.locationButtonText}>📍 Use Current Location</Text>
+         </TouchableOpacity>
 
-        {/* Update Button with LinearGradient */}
-        <TouchableOpacity onPress={handleUpdate} style={styles.updateButtonWrapper}>
-          <LinearGradient
-            colors={['#1789AE', '#132740']}
-            start={{ x: 1, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.updateButton}
-          >
-            <Text style={styles.updateButtonText}>Update</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+        
+        <LinearGradient
+  colors={['#1789AE', '#132740']}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 1 }}
+  style={styles.gradientButton}
+>
+  <TouchableOpacity style={styles.button} onPress={handleUpdate}>
+    <Text style={styles.buttonText}>Update Profile</Text>
+  </TouchableOpacity>
+</LinearGradient>
+
+      </ScrollView>
     </View>
   );
 }
 
-
 const styles = StyleSheet.create({
   header: {
-    paddingTop: 50,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    paddingTop: 70, // For status bar space on iOS/Android
   },
   backButton: {
     marginRight: 10,
-    marginTop:40
+    padding: 5,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
-    marginTop:40
+    color: 'white',
   },
-  body: {
-    flex: 1,
+
+  container: {
     padding: 20,
+    backgroundColor: '#fff',
+    flexGrow: 1,
   },
   input: {
+    height: 50,
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 8,
     paddingHorizontal: 15,
-    paddingVertical: 18, // Increased padding for more height
-    fontSize: 16,
-    marginBottom: 25,    // Increased marginBottom for bigger gap between inputs
-    height:60
-  },
-  
-  locationButton: {
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 10,
-
-  },
-  locationButtonText: {
-    color: 'white',
-    fontSize: 16,
-    color:"blue"
-  },
-  locationText: {
-    fontSize: 14,
-    color: '#333',
     marginBottom: 20,
+    backgroundColor: '#f9f9f9',
   },
-  updateButtonWrapper: {
-    alignItems: 'center',
-  },
-  updateButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 40,
+  button: {
+    height: 50,
+    backgroundColor: '#1e90ff',
     borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 1, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
-  updateButtonText: {
-    color: 'white',
-    fontSize: 16,
+  buttonText: {
+    color: '#fff',
     fontWeight: 'bold',
-    textAlign: 'center',
+    fontSize: 16,
   },
-});
+  gradientButton: {
+  borderRadius: 8,
+  marginTop: 10,
+  shadowColor: '#000',
+  shadowOffset: { width: 1, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 2,
+},
+button: {
+  height: 50,
+  borderRadius: 8,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
 
+locationButton: {
+  marginBottom: 20,
+  backgroundColor: '#e0f7fa',
+  padding: 12,
+  borderRadius: 8,
+  alignItems: 'center',
+},
+locationButtonText: {
+  color: '#00796b',
+  fontWeight: '600',
+},
+});
