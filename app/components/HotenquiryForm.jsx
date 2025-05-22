@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
-  Image,
   FlatList,
   Modal,
   KeyboardAvoidingView,
@@ -13,39 +12,51 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Platform,
+  Image,
 } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function HotenquiryForm() {
   const router = useRouter();
+
+  // Form states
   const [name, setName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [category, setCategory] = useState('');
-  const [message, setMessage] = useState('');
-  const [imageUri, setImageUri] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [mainCategories, setMainCategories] = useState([]);
   const [searchText, setSearchText] = useState('');
+  const [image, setImage] = useState(null);
+  const [message, setMessage] = useState('');
+  const [userId, setUserId] = useState(null);
 
+  // Load stored user data & userId
   useEffect(() => {
     const loadUserDetails = async () => {
       try {
-        const storedName = await AsyncStorage.getItem('userName');
-        const storedMobile = await AsyncStorage.getItem('userMobile');
-        const storedMessage = await AsyncStorage.getItem('hotenquiry_message');
-        const storedImage = await AsyncStorage.getItem('hotenquiry_image');
+        console.log('Loading user data from AsyncStorage...');
+        const storedMessage = await AsyncStorage.getItem('userMessage');
+        const storedUserId = await AsyncStorage.getItem('userId');
+        const storedName = await AsyncStorage.getItem('name');
+        const storedMobile = await AsyncStorage.getItem('mobile');
 
+        if (storedMessage) setMessage(storedMessage);
+        if (storedUserId) setUserId(storedUserId);
         if (storedName) setName(storedName);
         if (storedMobile) setMobileNumber(storedMobile);
-        if (storedMessage) setMessage(storedMessage);
-        if (storedImage) setImageUri(storedImage);
+
+        console.log('Loaded user data:', {
+          message: storedMessage,
+          userId: storedUserId,
+          name: storedName,
+          mobile: storedMobile,
+        });
       } catch (error) {
         console.error('Failed to load data from AsyncStorage:', error);
       }
@@ -53,9 +64,12 @@ export default function HotenquiryForm() {
     loadUserDetails();
   }, []);
 
+  // Fetch main categories from API
   const fetchMainCategories = async () => {
     try {
+      console.log('Fetching main categories from API...');
       const response = await axios.get('https://veebuilds.com/mobile/maincategory.php');
+      console.log('Categories API response:', response.data);
       if (response.data.result === 'Success') {
         setMainCategories(response.data.storeList);
       } else {
@@ -66,61 +80,95 @@ export default function HotenquiryForm() {
     }
   };
 
-  const compressImage = async (uri) => {
-    const manipResult = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: 800 } }],
-      { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG }
-    );
-    return manipResult.uri;
-  };
-
   const handleOpenModal = async () => {
     setModalVisible(true);
     await fetchMainCategories();
   };
 
-  const handleImagePick = async () => {
-    Alert.alert('Upload Image', 'Select an option', [
-      {
-        text: 'Take Photo',
-        onPress: async () => {
-          const permission = await ImagePicker.requestCameraPermissionsAsync();
-          if (!permission.granted) return;
-
-          const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 0.7,
-          });
-          if (!result.canceled) {
-            const compressedUri = await compressImage(result.assets[0].uri);
-            setImageUri(compressedUri);
-          }
-        },
-      },
-      {
-        text: 'Choose from Gallery',
-        onPress: async () => {
-          const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!permission.granted) return;
-
-          const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 0.7,
-          });
-          if (!result.canceled) {
-            const compressedUri = await compressImage(result.assets[0].uri);
-            setImageUri(compressedUri);
-          }
-        },
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
-
   const filteredCategories = mainCategories.filter((item) =>
     item.title.toLowerCase().includes(searchText.toLowerCase())
   );
+
+  // Upload image to server
+  const uploadImage = async (uri) => {
+    const formData = new FormData();
+    formData.append('file', {
+      uri,
+      name: 'photo.jpg',
+      type: 'image/jpeg',
+    });
+
+    try {
+      console.log('Uploading image to server...', uri);
+      const response = await axios.post('https://veebuilds.com/mobile/hot_enquiry_file.php', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      console.log('Image upload response:', response.data);
+
+      if (response.data.status === 'success') {
+        Alert.alert('Success', 'Image uploaded successfully!');
+      } else {
+        Alert.alert('Upload failed', 'Something went wrong.');
+      }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      Alert.alert('Error', 'Failed to upload image.');
+    }
+  };
+
+  // Pick image from camera or gallery
+  const pickImage = async () => {
+    Alert.alert(
+      'Upload Image',
+      'Choose an option',
+      [
+        {
+          text: 'Camera',
+          onPress: async () => {
+            const permission = await ImagePicker.requestCameraPermissionsAsync();
+            if (!permission.granted) {
+              Alert.alert('Permission Required', 'Camera access is required.');
+              return;
+            }
+
+            const result = await ImagePicker.launchCameraAsync({
+              allowsEditing: true,
+              quality: 0.7,
+            });
+
+            if (!result.canceled) {
+              const selectedImage = result.assets[0];
+              setImage(selectedImage.uri);
+              uploadImage(selectedImage.uri);
+            }
+          },
+        },
+        {
+          text: 'Gallery',
+          onPress: async () => {
+            const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (!permission.granted) {
+              Alert.alert('Permission Required', 'Media library access is required.');
+              return;
+            }
+
+            const result = await ImagePicker.launchImageLibraryAsync({
+              allowsEditing: true,
+              quality: 0.7,
+            });
+
+            if (!result.canceled) {
+              const selectedImage = result.assets[0];
+              setImage(selectedImage.uri);
+              uploadImage(selectedImage.uri);
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+      { cancelable: true }
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -144,6 +192,7 @@ export default function HotenquiryForm() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+            {/* Show name and mobile with stored values */}
             <TextInput
               style={styles.input}
               placeholder="Enter your name"
@@ -164,36 +213,88 @@ export default function HotenquiryForm() {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.uploadBox} onPress={handleImagePick}>
-              <Ionicons name="cloud-upload-outline" size={24} color="gray" />
-              <Text style={styles.uploadText}>Upload Image</Text>
+            <TouchableOpacity style={styles.imageUploadBox} onPress={pickImage}>
+              {image ? (
+                <Image source={{ uri: image }} style={styles.uploadedImage} />
+              ) : (
+                <>
+                  <Ionicons name="cloud-upload-outline" size={30} color="#555" />
+                  <Text style={{ color: '#555', marginTop: 5 }}>Upload Image</Text>
+                </>
+              )}
             </TouchableOpacity>
 
-            {imageUri && (
-              <Image
-                source={{ uri: imageUri }}
-                style={{ width: 100, height: 100, marginBottom: 10 }}
-              />
-            )}
-
             <TextInput
-              style={[styles.input, styles.messageInput]}
+              style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
               placeholder="Enter your message"
               value={message}
               onChangeText={setMessage}
               multiline
+              numberOfLines={4}
             />
 
             <TouchableOpacity
               style={styles.continueButton}
               onPress={async () => {
                 try {
-                  await AsyncStorage.setItem('hotenquiry_image', imageUri || '');
-                  await AsyncStorage.setItem('hotenquiry_message', message || '');
-                  Alert.alert('Saved', 'Image and message stored successfully!');
+                  console.log('Submitting enquiry with data:', {
+                    userId,
+                    message,
+                    category,
+                    name,
+                    mobileNumber,
+                    image,
+                  });
+
+                  await AsyncStorage.setItem('userMessage', message);
+                  await AsyncStorage.setItem('name', name);
+                  await AsyncStorage.setItem('mobile', mobileNumber);
+
+                  if (!userId) {
+                    Alert.alert('Error', 'User ID not found. Please login.');
+                    return;
+                  }
+
+                  if (!message || !category || !name || !mobileNumber) {
+                    Alert.alert('Error', 'Please fill all required fields.');
+                    return;
+                  }
+
+                  const selectedCategory = mainCategories.find(cat => cat.title === category);
+                  const category_id = selectedCategory ? selectedCategory.id : null;
+
+                  if (!category_id) {
+                    Alert.alert('Error', 'Invalid category selected.');
+                    return;
+                  }
+
+                  const imageFilename = image ? image.split('/').pop() : '';
+                  const city = 'Old Pallavaram';
+
+                  const url = 'https://veebuilds.com/mobile/hot_enquiry_add.php';
+                  const params = {
+                    user_id: userId,
+                    message,
+                    category_id,
+                    image: imageFilename,
+                    city,
+                    name,          // Send name
+                    mobile: mobileNumber, // Send mobile
+                  };
+
+                  console.log('Sending enquiry API request with params:', params);
+                  const response = await axios.get(url, { params });
+                  console.log('Enquiry submission response:', response.data);
+
+                  if (response.data.success === 1) {
+                    Alert.alert('Success', 'Enquiry submitted successfully!');
+                    router.back();
+                  } else {
+                    Alert.alert('Error', 'Failed to submit enquiry');
+                  }
                 } catch (err) {
-                  console.error('Error saving data:', err);
-                  Alert.alert('Error', 'Failed to store data.');
+                  console.error('Error submitting enquiry:', err);
+                  Alert.alert('Error', 'An error occurred while submitting enquiry.');
                 }
               }}
             >
@@ -239,112 +340,78 @@ export default function HotenquiryForm() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: {
-    height: 120,
-    paddingTop: 40,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 30,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 10,
-  },
-  body: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
+  container: { flex: 1, backgroundColor: 'white' },
+  header: { paddingTop: 90, paddingBottom: 15, paddingHorizontal: 15 },
+  headerContent: { flexDirection: 'row', alignItems: 'center' },
+  headerTitle: { flex: 1, color: 'white', fontWeight: 'bold', fontSize: 20, marginLeft: 20 },
+  body: { paddingHorizontal: 15, paddingBottom: 30, marginTop: 40 },
   input: {
-    width: '100%',
-    height: 55,
-    borderColor: '#ccc',
     borderWidth: 1,
-    borderRadius: 8,
-    marginBottom: 25,
-    paddingHorizontal: 10,
-    fontSize: 16,
-    top: 20,
-    justifyContent: 'center',
-  },
-  messageInput: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  uploadBox: {
-    width: '100%',
-    height: 100,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 8,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 12,
     marginBottom: 15,
+    fontSize: 16,
+    color: '#000',
+  },
+  imageUploadBox: {
+    borderWidth: 1,
+    borderColor: '#bbb',
+    borderRadius: 5,
+    height: 150,
     justifyContent: 'center',
     alignItems: 'center',
-    flexDirection: 'row',
-    backgroundColor: '#f9f9f9',
-    top: 20,
+    marginBottom: 15,
+    backgroundColor: '#eee',
   },
-  uploadText: {
-    color: 'gray',
-    fontSize: 16,
-    marginLeft: 10,
+  uploadedImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 5,
+    resizeMode: 'cover',
   },
   continueButton: {
-    width: '50%',
-    height: 50,
-    backgroundColor: '#1789AE',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8,
-    top: 20,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  modalWrapper: {
-  flex: 1,
-  justifyContent: 'flex-end', // Show modal from the bottom
-  backgroundColor: 'rgba(0,0,0,0.3)', // Semi-transparent backdrop
-},
-modalContainer: {
-  height: '60%', // 60% of screen height (reduced by 40%)
-  backgroundColor: '#fff',
-  borderTopLeftRadius: 20,
-  borderTopRightRadius: 20,
-  padding: 20,
-},
-
-  searchInput: {
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
-    fontSize: 16,
-  },
-  modalItem: {
-    paddingVertical: 20,
-    borderBottomColor: '#eee',
-    borderBottomWidth: 1,
-  },
-  closeModal: {
     backgroundColor: '#1789AE',
     padding: 15,
+    borderRadius: 5,
     alignItems: 'center',
-    borderRadius: 8,
-    marginTop: 20,
+  },
+  buttonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+  modalWrapper: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    maxHeight: '70%',
+    padding: 15,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 10,
+  },
+  modalItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  closeModal: {
+    marginTop: 10,
+    backgroundColor: '#1789AE',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
   },
 });
+
+
+
 
 
 
