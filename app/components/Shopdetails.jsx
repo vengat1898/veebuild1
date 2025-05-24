@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity, Image, ScrollView, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Image, ScrollView, ActivityIndicator, Linking, Alert } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,21 +11,59 @@ export default function Shopdetails() {
   const [activeTab, setActiveTab] = useState('Quick Info');
   const [vendorData, setVendorData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { vendor_id } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const vendor_id = params.vendor_id || params.vendor;
 
   useEffect(() => {
-    axios
-      .get(`https://veebuilds.com/mobile/vendor_details.php?vendor_id=${vendor_id}`)
-      .then(response => {
-        if (response.data?.result === "Success") {
+    const fetchVendorDetails = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(
+          `https://veebuilds.com/mobile/vendor_details.php?vendor_id=${vendor_id}`
+        );
+
+        if (response.data?.result === "Success" && response.data.storeList?.length > 0) {
           setVendorData(response.data.storeList[0]);
+        } else {
+          Alert.alert('Error', response.data?.text || 'No vendor details found');
         }
-      })
-      .catch(error => {
-        console.error('API fetch error:', error);
-      })
-      .finally(() => setLoading(false));
-  }, [vendor_id]); 
+      } catch (err) {
+        Alert.alert('Error', err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVendorDetails();
+  }, [vendor_id]);
+
+  const handleCall = () => {
+    if (vendorData?.mobile) {
+      Linking.openURL(`tel:${vendorData.mobile}`);
+    } else {
+      Alert.alert('No phone number available');
+    }
+  };
+
+  const handleWhatsApp = () => {
+    if (vendorData?.whatsapp) {
+      Linking.openURL(`https://wa.me/${vendorData.whatsapp}`);
+    } else if (vendorData?.mobile) {
+      Linking.openURL(`https://wa.me/91${vendorData.mobile}`);
+    } else {
+      Alert.alert('No WhatsApp number available');
+    }
+  };
+
+  const handleEnquiry = () => {
+    router.push({
+      pathname: '/components/Enquiry',
+      params: {
+        vendor_id: vendor_id,
+        shopName: vendorData?.name || '',
+      }
+    });
+  };
 
   if (loading) {
     return (
@@ -39,6 +77,9 @@ export default function Shopdetails() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Text>Failed to load vendor details.</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Text>Go Back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -60,22 +101,25 @@ export default function Shopdetails() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.box}>
           <Image
-            source={{ uri: vendorData.shop_image }}
+            source={vendorData.shop_image ? { uri: vendorData.shop_image } : require('../../assets/images/veebuilder.png')}
             style={styles.logo}
           />
         </View>
 
         <Text style={styles.nameText}>{vendorData.name}</Text>
         <Text style={styles.distance}>13 km away from you</Text>
-        <Text style={styles.city}>{vendorData.city}</Text>
-        {/* <Text style={styles.locationText}>{vendorData.location}</Text> */}
-        <Text style={styles.enquery}>{vendorData.enquery} enquiries answered</Text>
-        <Text style={styles.yera_of_exp}>{vendorData.yera_of_exp} years of experience</Text>
+        {vendorData.city && <Text style={styles.city}>{vendorData.city}</Text>}
+        <Text style={styles.enquery}>{vendorData.enquery || 0} enquiries answered</Text>
+        <Text style={styles.yera_of_exp}>{vendorData.yera_of_exp || 0} years of experience</Text>
 
         <View style={styles.separator} />
-        <Text style={styles.addressHeading}>Address</Text>
-        <Text style={styles.addressText}>{vendorData.location}</Text>
-        <View style={styles.separator} />
+        {vendorData.location && (
+          <>
+            <Text style={styles.addressHeading}>Address</Text>
+            <Text style={styles.addressText}>{vendorData.location}</Text>
+            <View style={styles.separator} />
+          </>
+        )}
 
         <View style={styles.tabsContainer}>
           {['Quick Info', 'Overview', 'Photos'].map((tab) => (
@@ -92,50 +136,78 @@ export default function Shopdetails() {
         <View style={styles.tabContent}>
           {activeTab === 'Quick Info' && (
             <>
-              <Text style={styles.infoHeading}>Mobile</Text>
-              <Text style={styles.infoText}>{vendorData.mobile}</Text>
-
-              <Text style={styles.infoHeading}>Email</Text>
-              <Text style={styles.infoText}>{vendorData.email}</Text>
-
-              <Text style={styles.infoHeading}>Year Established</Text>
-              <Text style={styles.infoText}>{vendorData.year_established}</Text>
+              {vendorData.mobile && (
+                <>
+                  <Text style={styles.infoHeading}>Mobile</Text>
+                  <Text style={styles.infoText}>{vendorData.mobile}</Text>
+                </>
+              )}
+              
+              {vendorData.email && (
+                <>
+                  <Text style={styles.infoHeading}>Email</Text>
+                  <Text style={styles.infoText}>{vendorData.email}</Text>
+                </>
+              )}
+              
+              {vendorData.year_established && (
+                <>
+                  <Text style={styles.infoHeading}>Year Established</Text>
+                  <Text style={styles.infoText}>{vendorData.year_established}</Text>
+                </>
+              )}
             </>
           )}
 
           {activeTab === 'Overview' && (
             <>
-              <Text style={styles.infoHeading}>Number of Employees</Text>
-              <Text style={styles.infoText}>{vendorData.no_of_emp}</Text>
-
-              <Text style={styles.infoHeading}>GST Number</Text>
-              <Text style={styles.infoText}>{vendorData.gstnumber}</Text>
-
-              <Text style={styles.infoHeading}>Turn Over</Text>
-              <Text style={styles.infoText}>{vendorData.turn_over}</Text>
+              {vendorData.no_of_emp && (
+                <>
+                  <Text style={styles.infoHeading}>Number of Employees</Text>
+                  <Text style={styles.infoText}>{vendorData.no_of_emp}</Text>
+                </>
+              )}
+              
+              {vendorData.gstnumber && (
+                <>
+                  <Text style={styles.infoHeading}>GST Number</Text>
+                  <Text style={styles.infoText}>{vendorData.gstnumber}</Text>
+                </>
+              )}
+              
+              {vendorData.turn_over && (
+                <>
+                  <Text style={styles.infoHeading}>Turn Over</Text>
+                  <Text style={styles.infoText}>{vendorData.turn_over}</Text>
+                </>
+              )}
             </>
           )}
 
           {activeTab === 'Photos' && (
             <View style={styles.photoContainer}>
-              <Image source={{ uri: vendorData.shop_image }} style={styles.photoImage} />
+              {vendorData.shop_image ? (
+                <Image source={{ uri: vendorData.shop_image }} style={styles.photoImage} />
+              ) : (
+                <Text>No photos available</Text>
+              )}
             </View>
           )}
         </View>
       </ScrollView>
 
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.button}>
+        <TouchableOpacity style={styles.button} onPress={handleCall}>
           <Ionicons name="call" size={16} color="white" style={styles.icon} />
           <Text style={styles.buttonText}>Call</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button}>
+        <TouchableOpacity style={styles.button} onPress={handleEnquiry}>
           <Ionicons name="information-circle" size={16} color="white" style={styles.icon} />
           <Text style={styles.buttonText}>Enquiry Now</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button}>
+        <TouchableOpacity style={styles.button} onPress={handleWhatsApp}>
           <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
           <Text style={styles.buttonText}>WhatsApp</Text>
         </TouchableOpacity>
@@ -143,6 +215,7 @@ export default function Shopdetails() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   header: {
     height: 120,
@@ -289,8 +362,6 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 10,
   },
-
-
   buttonRow: {
     flexDirection: 'row',
     alignItems:"center",
@@ -298,7 +369,6 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom:20,
     marginLeft:15
-    
   },
   button: {
     flexDirection: 'row',
@@ -310,7 +380,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     width: 98,
     marginLeft:10
-    
   },
   buttonText: {
     color: 'white',
@@ -320,5 +389,4 @@ const styles = StyleSheet.create({
   icon: {
     marginRight: 4,
   },
-  
 });

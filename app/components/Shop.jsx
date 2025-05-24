@@ -7,145 +7,193 @@ import {
   Image,
   FlatList,
   Modal,
+  ActivityIndicator,
+  Alert,
+  ScrollView
 } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import axios from 'axios';
+import Checkbox from 'expo-checkbox';
 
 export default function Shop() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const customer_id = params.customer_id || '123'; // Fallback for testing
-  const cat_id = params.cat_id || '5';             // Fallback for testing
-
-  console.log('customer_id:', customer_id);
-  console.log('cat_id:', cat_id);
+  const { cat_id, customer_id } = params;
 
   const [modalVisible, setModalVisible] = useState(false);
   const [brandModalVisible, setBrandModalVisible] = useState(false);
-  const [selectedType, setSelectedType] = useState('');
+  const [selectedTypes, setSelectedTypes] = useState([]);
   const [selectedBrand, setSelectedBrand] = useState('');
-  const [shopData, setShopData] = useState([]);
-  const [filteredData, setFilteredData] = useState([]);
-  const [typeOptions, setTypeOptions] = useState([]);
-  const [brandOptions, setBrandOptions] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [types, setTypes] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [typeLoading, setTypeLoading] = useState(false);
+  const [brandLoading, setBrandLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const fetchVendorList = async () => {
-    try {
-      const response = await axios.get(
-        'https://veebuilds.com/mobile/vendor_list.php',
-        {
-          params: {
-            customer_id,
-            category_id: cat_id,
-          },
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (!cat_id || !customer_id) {
+          throw new Error('Missing category ID or customer ID');
         }
-      );
 
-      if (response.data.result === 'fail') {
-        console.warn('Vendor API failed:', response.data.text);
-        return;
+        setLoading(true);
+        
+        // Fetch vendors
+        const vendorsResponse = await axios.get(
+          `https://veebuilds.com/mobile/vendor_list.php?category_id=${cat_id}&customer_id=${customer_id}`
+        );
+
+        if (vendorsResponse.data.result === 'Success') {
+          setVendors(vendorsResponse.data.storeList);
+        } else {
+          setError(vendorsResponse.data.text || 'Failed to fetch vendors');
+        }
+
+        // Fetch types
+        setTypeLoading(true);
+        const typesResponse = await axios.get(
+          `https://veebuilds.com/mobile/type_list_customer.php?cat_id=${cat_id}&customer_id=${customer_id}`
+        );
+
+        if (typesResponse.data.result === 'Success') {
+          setTypes(typesResponse.data.storeList);
+        } else {
+          console.warn('Failed to fetch types:', typesResponse.data.text);
+        }
+      } catch (err) {
+        setError(err.message);
+        console.error('Error fetching data:', err);
+      } finally {
+        setLoading(false);
+        setTypeLoading(false);
       }
+    };
 
-      const list = response.data.storeList || [];
+    fetchData();
+  }, [cat_id, customer_id]);
 
-      const formattedList = list.map((item) => ({
-        id: item.id,
-        title: item.name,
-        distance: `${item.distance} km away from you`,
-        city: item.city,
-        yera_of_exp: `${item.yera_of_exp} years in business`,
-        enquery: `${item.enquery} enquiries answered`,
-        type: item.type || '',
-        brand: item.brand || '',
-        image: item.shop_image?.replace(/\\/g, '') || '',
-      }));
-
-      setShopData(formattedList);
-      setFilteredData(formattedList);
-    } catch (error) {
-      console.error('Failed to fetch vendor list:', error);
-    }
-  };
-
-  const fetchTypeList = async () => {
+  const fetchBrands = async (typeId) => {
     try {
+      setBrandLoading(true);
       const response = await axios.get(
-        'https://veebuilds.com/mobile/type_list_customer.php',
-        {
-          params: {
-            cat_id,
-            customer_id,
-            brand_id: '',
-          },
-        }
+        `https://veebuilds.com/mobile/brand_list_customer.php?cat_id=${cat_id}&customer_id=${customer_id}&type_id=${typeId}`
       );
-      const list = response.data.storeList || [];
-      setTypeOptions(list.map((item) => item.title));
-    } catch (error) {
-      console.error('Failed to fetch types:', error);
+      
+      if (response.data.result === 'Success') {
+        setBrands(response.data.storeList);
+      } else {
+        console.warn('Failed to fetch brands:', response.data.text);
+        setBrands([]);
+      }
+    } catch (err) {
+      console.error('Error fetching brands:', err);
+      setBrands([]);
+    } finally {
+      setBrandLoading(false);
     }
   };
 
-  const fetchBrandList = async () => {
-    try {
-      const response = await axios.get(
-        'https://veebuilds.com/mobile/brand_list_customer.php',
-        {
-          params: {
-            cat_id,
-            customer_id,
-          },
-        }
-      );
-      const list = response.data.brandList || [];
-      setBrandOptions(list.map((item) => item.title));
-    } catch (error) {
-      console.error('Failed to fetch brands:', error);
-    }
+  const toggleTypeSelection = (typeId) => {
+    setSelectedTypes(prev => {
+      if (prev.includes(typeId)) {
+        return prev.filter(id => id !== typeId);
+      } else {
+        return [...prev, typeId];
+      }
+    });
   };
 
-  useEffect(() => {
-    fetchVendorList();
-  }, []);
+  const applyTypeFilter = () => {
+    setModalVisible(false);
+    // Here you would typically filter the vendors based on selected types
+    // You might need to make another API call with the selected types
+    console.log('Selected types:', selectedTypes);
+  };
 
-  useEffect(() => {
-    if (modalVisible) fetchTypeList();
-    if (brandModalVisible) fetchBrandList();
-  }, [modalVisible, brandModalVisible]);
+  const clearTypeFilter = () => {
+    setSelectedTypes([]);
+    setModalVisible(false);
+    // Reset the vendors list to original unfiltered state
+  };
+
+  const handleBrandModalOpen = async () => {
+    if (selectedTypes.length === 0) {
+      Alert.alert('Please select at least one type first');
+      return;
+    }
+    
+    // For simplicity, we'll use the first selected type to fetch brands
+    // In a real app, you might want to handle multiple types differently
+    await fetchBrands(selectedTypes[0]);
+    setBrandModalVisible(true);
+  };
 
   const renderCard = ({ item }) => (
     <View style={styles.card}>
       <Image
-        source={item.image ? { uri: item.image } : require('../../assets/images/veebuilder.png')}
+        source={item.shop_image ? { uri: item.shop_image } : require('../../assets/images/veebuilder.png')}
         style={styles.logo}
       />
       <View style={{ flex: 1 }}>
         <TouchableOpacity
-          onPress={() => router.push({ pathname: '/components/Shopdetails', params: { vendor_id: item.id } })}
-
+          onPress={() => router.push({
+            pathname: '/components/Shopdetails',
+            params: { 
+              vendor_id: item.id,
+              shopName: item.name,
+              shopImage: item.shop_image,
+              mobile: item.mobile,
+              whatsapp: item.whatsapp,
+              email: item.email,
+              experience: item.yera_of_exp,
+              location: item.location,
+              city: item.city,
+              state: item.state,
+              country: item.country,
+              rattings: item.rattings,
+              enquery: item.enquery
+            }
+          })}
           style={styles.cardTextContainer}
         >
-          <Text style={styles.title}>{item.title}</Text>
-          <Text style={styles.subText}>{item.distance}</Text>
-          <Text style={styles.subText}>{item.city}</Text>
-          <Text style={styles.subText}>{item.yera_of_exp}</Text>
-          <Text style={styles.subText}>{item.enquery}</Text> 
+          <View style={styles.textGroup}>
+            <Text style={styles.title}>{item.name}</Text>
+            <Text style={styles.subText}>{item.distance} km away</Text>
+            <Text style={styles.subText}>{item.city}</Text>
+            <Text style={styles.subText}>{item.yera_of_exp} years in business</Text>
+            <Text style={styles.subText}>{item.enquery} enquiries answered</Text>
+          </View>
         </TouchableOpacity>
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.button}>
+          <TouchableOpacity style={styles.button} onPress={() => {
+            if (item.mobile) {
+              Alert.alert('Call', `Would you like to call ${item.mobile}?`);
+            } else {
+              Alert.alert('No phone number available');
+            }
+          }}>
             <Ionicons name="call" size={16} color="white" style={styles.icon} />
             <Text style={styles.buttonText}>Call</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.button}>
+          <TouchableOpacity style={styles.button} onPress={() => router.push('/components/Enquiry')}>
             <Ionicons name="information-circle" size={16} color="white" style={styles.icon} />
             <Text style={styles.buttonText}>Enquiry</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.button}>
+          <TouchableOpacity style={styles.button} onPress={() => {
+            if (item.whatsapp) {
+              Alert.alert('WhatsApp', `Would you like to message ${item.whatsapp}?`);
+            } else {
+              Alert.alert('No WhatsApp number available');
+            }
+          }}>
             <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
             <Text style={styles.buttonText}>WhatsApp</Text>
           </TouchableOpacity>
@@ -154,17 +202,24 @@ export default function Shop() {
     </View>
   );
 
-  const handleTypeSelect = (type) => {
-    setSelectedType(type);
-    setFilteredData(shopData.filter((item) => item.type === type || type === ''));
-    setModalVisible(false);
-  };
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#1789AE" style={styles.loader} />
+      </View>
+    );
+  }
 
-  const handleBrandSelect = (brand) => {
-    setSelectedBrand(brand);
-    setFilteredData(shopData.filter((item) => item.brand === brand || brand === ''));
-    setBrandModalVisible(false);
-  };
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Error: {error}</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Text>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -175,66 +230,94 @@ export default function Shop() {
         <Text style={styles.headerText}>Shop</Text>
       </View>
 
-      {/* <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
-        <TextInput
-          placeholder="Search materials..."
-          style={styles.searchInput}
-          placeholderTextColor="#888"
-        />
-      </View> */}
-
-<TouchableOpacity onPress={() => router.push('/components/Search')}>
-      <View style={styles.searchContainer}>
-      <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search"
-          placeholderTextColor="#888"
-          editable={false} 
-          pointerEvents="none" 
-        />
-      </View>
-    </TouchableOpacity>
+      <TouchableOpacity onPress={() => router.push('/components/Search')}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search"
+            placeholderTextColor="#888"
+            editable={false}
+            pointerEvents="none"
+          />
+        </View>
+      </TouchableOpacity>
 
       <View style={styles.dropdownRow}>
-        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.dropdownContainer}>
+        <TouchableOpacity 
+          onPress={() => setModalVisible(true)} 
+          style={styles.dropdownContainer}
+        >
           <Ionicons name="list" size={20} color="#888" style={styles.dropdownIcon} />
-          <Text style={styles.dropdownText}>{selectedType || 'Type'}</Text>
+          <Text style={styles.dropdownText}>
+            {selectedTypes.length > 0 
+              ? `${selectedTypes.length} selected` 
+              : 'Type'}
+          </Text>
           <Ionicons name="chevron-down" size={20} color="#888" style={styles.dropdownArrow} />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => setBrandModalVisible(true)} style={styles.dropdownContainer}>
+        <TouchableOpacity 
+          onPress={handleBrandModalOpen} 
+          style={styles.dropdownContainer}
+        >
           <Ionicons name="pricetag" size={20} color="#888" style={styles.dropdownIcon} />
           <Text style={styles.dropdownText}>{selectedBrand || 'Brand'}</Text>
           <Ionicons name="chevron-down" size={20} color="#888" style={styles.dropdownArrow} />
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={filteredData}
-        keyExtractor={(item) => item.id}
-        renderItem={renderCard}
-        contentContainerStyle={{ paddingBottom: 20 }}
-      />
+      {vendors.length > 0 ? (
+        <FlatList
+          data={vendors}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderCard}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        />
+      ) : (
+        <View style={styles.noResults}>
+          <Text>No vendors found for this category</Text>
+        </View>
+      )}
 
-      {/* Type Modal */}
+      {/* Types Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalBackground}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Select Type</Text>
-            <FlatList
-              data={typeOptions}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity onPress={() =>  handleTypeSelect(item)} style={styles.modalOption}>
-                  <Text style={styles.modalOptionText}>{item}</Text>
-                </TouchableOpacity>
-              )}
-            />
-            <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.modalCloseButton}>
-              <Text style={styles.modalCloseText}>Close</Text>
-            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Select Types</Text>
+            
+            {typeLoading ? (
+              <ActivityIndicator size="large" color="#1789AE" />
+            ) : (
+              <ScrollView style={styles.modalScrollView}>
+                {types.map((type) => (
+                  <View key={type.id} style={styles.checkboxContainer}>
+                    <Checkbox
+                      value={selectedTypes.includes(type.id)}
+                      onValueChange={() => toggleTypeSelection(type.id)}
+                      color={selectedTypes.includes(type.id) ? '#1789AE' : undefined}
+                    />
+                    <Text style={styles.checkboxLabel}>{type.title}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+            
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity 
+                onPress={clearTypeFilter} 
+                style={[styles.modalButton, styles.clearButton]}
+              >
+                <Text style={styles.modalButtonText}>Clear</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                onPress={applyTypeFilter} 
+                style={[styles.modalButton, styles.applyButton]}
+              >
+                <Text style={styles.modalButtonText1}>Apply</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -244,16 +327,39 @@ export default function Shop() {
         <View style={styles.modalBackground}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Select Brand</Text>
-            <FlatList
-              data={brandOptions}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => handleBrandSelect(item)} style={styles.modalOption}>
-                  <Text style={styles.modalOptionText}>{item}</Text>
-                </TouchableOpacity>
-              )}
-            />
-            <TouchableOpacity onPress={() => setBrandModalVisible(false)} style={styles.modalCloseButton}>
+            
+            {brandLoading ? (
+              <ActivityIndicator size="large" color="#1789AE" />
+            ) : brands.length > 0 ? (
+              <FlatList
+                data={brands}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedBrand(item.title);
+                      setBrandModalVisible(false);
+                      // Here you would typically filter vendors by the selected brand
+                    }}
+                    style={styles.brandOption}
+                  >
+                    <Image 
+                      source={{ uri: item.image }} 
+                      style={styles.brandImage} 
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.brandText}>{item.title}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            ) : (
+              <Text style={styles.noBrandsText}>No brands available for selected type</Text>
+            )}
+            
+            <TouchableOpacity 
+              onPress={() => setBrandModalVisible(false)} 
+              style={styles.modalCloseButton}
+            >
               <Text style={styles.modalCloseText}>Close</Text>
             </TouchableOpacity>
           </View>
@@ -317,16 +423,16 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     alignItems: 'flex-start',
-    height:250
+    height: 250,
   },
   logo: { width: 150, height: 150, resizeMode: 'contain', marginRight: 16 },
-  cardTextContainer: { marginBottom: 12, left: 20 },
+  cardTextContainer: { marginBottom: 12, left: 20, gap: 8 },
+  textGroup: { marginBottom: 12, gap: 8 },
   title: { fontWeight: 'bold', fontSize: 16, marginBottom: 6 },
   subText: { fontSize: 11, color: '#555', marginBottom: 4 },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 59,
     gap: 12,
     right: 160,
   },
@@ -355,13 +461,106 @@ const styles = StyleSheet.create({
     padding: 16,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: 450,
+    maxHeight: '90%',
   },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 12 },
-  modalOption: { paddingVertical: 12 },
-  modalOptionText: { fontSize: 16, color: '#000' },
-  modalCloseButton: { paddingVertical: 12, alignItems: 'center' },
-  modalCloseText: { fontSize: 16, color: '#1789AE' },
+  modalScrollView: {
+    maxHeight: '80%',
+    marginBottom: 16,
+  },
+  modalTitle: { 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    marginBottom: 12,
+    color: '#1789AE',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    gap: 20
+  },
+  checkboxLabel: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#333',
+    gap: 70
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  modalButton: {
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 8,
+  },
+  clearButton: {
+    backgroundColor: '#f1f1f1',
+  },
+  applyButton: {
+    backgroundColor: '#1789AE',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1789AE',
+  },
+  modalButtonText1: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  brandOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  brandImage: {
+    width: 50,
+    height: 50,
+    marginRight: 12,
+  },
+  brandText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  noBrandsText: {
+    textAlign: 'center',
+    paddingVertical: 20,
+    color: '#888',
+  },
+  modalCloseButton: { 
+    paddingVertical: 12, 
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  modalCloseText: { 
+    fontSize: 16, 
+    color: '#1789AE',
+    fontWeight: 'bold',
+  },
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  noResults: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
 
 

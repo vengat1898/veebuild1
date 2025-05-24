@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Materials({ navigation }) {
   const [categories, setCategories] = useState([]);
@@ -11,6 +12,8 @@ export default function Materials({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [showTrending, setShowTrending] = useState(false);
   const router = useRouter();
+  const [userId, setUserId] = useState(null);
+  
 
   // Fetch all categories
   const fetchCategories = async () => {
@@ -80,10 +83,30 @@ export default function Materials({ navigation }) {
     }
   };
 
+  // useEffect(() => {
+  //   fetchCategories();
+  //   fetchMainCategories(); 
+  // }, []);
+
   useEffect(() => {
-    fetchCategories();
-    fetchMainCategories(); 
-  }, []);
+  const getUserId = async () => {
+    try {
+      const id = await AsyncStorage.getItem('userId');
+      if (id) {
+        setUserId(id);
+        console.log('Loaded userId:', id);
+      } else {
+        console.warn('No userId found in AsyncStorage.');
+      }
+    } catch (error) {
+      console.error('Failed to load userId:', error);
+    }
+  };
+
+  fetchCategories();
+  fetchMainCategories();
+  getUserId(); // <-- Call the function
+}, []);
 
   return (
     <View style={styles.container}>
@@ -149,9 +172,16 @@ export default function Materials({ navigation }) {
                     end={{ x: 1, y: 1 }}
                   >
                     <TouchableOpacity
-                      style={styles.trendingItem}
-                      onPress={() =>router.push({ pathname: '/components/Shop', params: { cat_id: item.id } })}
-                    >
+                        style={styles.trendingItem}
+                        onPress={() => {
+                        if (userId) {
+                        router.push({ pathname: '/components/Shop', params: { cat_id: item.id, customer_id: userId } });
+                        } else {
+                        Alert.alert('User ID not found', 'Please register or login again.');
+                       }
+                       }}
+                      > 
+
                       <Image source={{ uri: item.image }} style={styles.trendingImage} />
                       <Text style={styles.trendingLabel}>{item.title}</Text>
                     </TouchableOpacity>
