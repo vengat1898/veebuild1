@@ -13,6 +13,7 @@ export default function Hirepeople() {
   const fetchProfessions = async () => {
     try {
       const response = await axios.get('https://veebuilds.com/mobile/occupation_list.php');
+      console.log('API Response:', response.data);
       if (response.data?.storeList) {
         setProfessions(response.data.storeList);
       }
@@ -28,9 +29,10 @@ export default function Hirepeople() {
   }, []);
 
   const goToDetails = (profession) => {
+    console.log('Selected Profession ID:', profession.id);
     router.push({
       pathname: '/components/HirepeopleDeatils',
-      params: { id: profession.id, title: profession.title },
+      params: { id: profession.id, title: profession.title,v_id: profession.id, },
     });
   };
   

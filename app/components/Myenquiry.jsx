@@ -1,8 +1,9 @@
 import { StyleSheet, Text, View, TouchableOpacity, Image, Pressable } from 'react-native'
 import { MaterialIcons, Ionicons } from '@expo/vector-icons'
-import React from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useRouter } from 'expo-router'
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState, useEffect } from 'react';
 
 import material from '../../assets/images/hirepeople.png'
 import realestate from '../../assets/images/real.png'
@@ -10,10 +11,27 @@ import hirepeople from '../../assets/images/hirepeople.png'
 
 export default function Myenquiry() {
   const router = useRouter()
+   const [userId, setUserId] = useState(null);
 
   const handlePress = (type) => {
-    router.push({ pathname: '/components/MyenquiryDetails', params: { title: type } })
+    router.push({ pathname: '/components/MyenquiryDetails', params: { title: type ,customer_id: userId  }, })
   }
+
+    useEffect(() => {
+    const loadUserId = async () => {
+      try {
+        const storedUserId = await AsyncStorage.getItem('userId');
+        if (storedUserId) {
+          setUserId(storedUserId);
+          console.log('Loaded user ID:', storedUserId);
+        }
+      } catch (error) {
+        console.error('Failed to load user ID:', error);
+      }
+    };
+
+    loadUserId();
+  }, []);
 
   return (
     <View style={{ flex: 1 }}>

@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Search() {
   const navigation = useNavigation();
@@ -21,6 +22,23 @@ export default function Search() {
   const [storeList, setStoreList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [userId, setUserId] = useState(null);
+
+     useEffect(() => {
+    const loadUserId = async () => {
+      try {
+        const storedUserId = await AsyncStorage.getItem('userId');
+        if (storedUserId) {
+          setUserId(storedUserId);
+          console.log('Loaded user ID:', storedUserId);
+        }
+      } catch (error) {
+        console.error('Failed to load user ID:', error);
+      }
+    };
+
+    loadUserId();
+  }, []);
 
   const fetchStoreList = async () => {
     setLoading(true);
@@ -102,7 +120,7 @@ export default function Search() {
                 console.log('Tapped store:', item);
                 router.push({
                   pathname: '/components/Shop',
-                  params: { cat_id: item.id },
+                  params: { cat_id: item.id,customer_id: userId  },
                 });
               }}
             >

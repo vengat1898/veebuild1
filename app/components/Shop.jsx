@@ -182,10 +182,16 @@ export default function Shop() {
             <Text style={styles.buttonText}>Call</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.button} onPress={() => router.push('/components/Enquiry')}>
-            <Ionicons name="information-circle" size={16} color="white" style={styles.icon} />
-            <Text style={styles.buttonText}>Enquiry</Text>
-          </TouchableOpacity>
+          <TouchableOpacity 
+  style={styles.button} 
+  onPress={() => router.push({
+    pathname: '/components/Enquiry',
+    params: { cat_id, customer_id }
+  })}
+>
+  <Ionicons name="information-circle" size={16} color="white" style={styles.icon} />
+  <Text style={styles.buttonText}>Enquiry</Text>
+</TouchableOpacity>
 
           <TouchableOpacity style={styles.button} onPress={() => {
             if (item.whatsapp) {

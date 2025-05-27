@@ -7,9 +7,10 @@ import axios from 'axios';
 
 export default function Landdetails() {
   const router = useRouter();
-  const { id } = useLocalSearchParams(); // get id from params
+  const { id } = useLocalSearchParams();
   const [landDetails, setLandDetails] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     axios.get('https://veebuilds.com/mobile/all_land_list.php')
@@ -23,6 +24,34 @@ export default function Landdetails() {
         setLoading(false);
       });
   }, [id]);
+
+  const getFirstImageUrl = () => {
+    if (!landDetails?.siteimg) return null;
+    
+    try {
+      // Handle different possible formats of siteimg
+      // Case 1: It's already a clean string
+      if (typeof landDetails.siteimg === 'string' && !landDetails.siteimg.startsWith('[')) {
+        return `https://veebuilds.com/master/assets/images/product_image/${landDetails.siteimg}`;
+      }
+      
+      // Case 2: It's a stringified array
+      const imagesString = landDetails.siteimg.replace(/^\[|\]$/g, '');
+      const imagesArray = imagesString.split(',')
+        .map(img => img.trim().replace(/"/g, ''))
+        .filter(img => img.length > 0);
+      
+      if (imagesArray.length > 0) {
+        return `https://veebuilds.com/master/assets/images/product_image/${imagesArray[0]}`;
+      }
+    } catch (e) {
+      console.log('Error parsing images', e);
+    }
+    
+    return null;
+  };
+
+  const imageUrl = getFirstImageUrl();
 
   if (loading) {
     return (
@@ -46,14 +75,11 @@ export default function Landdetails() {
     land_mark,
     land_size,
     connection,
-    siteimg,
     property_type,
     cost_per_sq,
     tot_cost,
     mobile
   } = landDetails;
-
-  const imageUrl = `https://veebuilds.com/master/assets/images/product_image/${siteimg.replace(/[\[\]"]+/g, '')}`;
 
   return (
     <View style={styles.container}>
@@ -92,7 +118,25 @@ export default function Landdetails() {
         </View>
         <View style={styles.item}>
           <Text style={styles.label}>Site Image:</Text>
-          <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="contain" />
+          {imageUrl ? (
+            <Image 
+              source={{ uri: imageUrl }} 
+              style={styles.image} 
+              resizeMode="contain"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <View style={styles.placeholderImage}>
+              <Ionicons name="image" size={50} color="#ccc" />
+              <Text>No Image Available</Text>
+            </View>
+          )}
+          {imageError && (
+            <View style={styles.placeholderImage}>
+              <Ionicons name="image" size={50} color="#ccc" />
+              <Text>Failed to load image</Text>
+            </View>
+          )}
         </View>
         <View style={styles.item}>
           <Text style={styles.label}>Property Type:</Text>

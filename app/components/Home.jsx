@@ -16,7 +16,7 @@ import { MaterialIcons, FontAwesome, Ionicons, Entypo } from '@expo/vector-icons
 import { useRouter } from 'expo-router';
 import { ActivityIndicator } from 'react-native';
 import axios from 'axios';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // Images
 import hot_enqiury from '../../assets/images/hot_enqiury.jpg';
 import hire_people from '../../assets/images/hire_people.jpg';
@@ -108,10 +108,28 @@ export default function Home() {
   const [loadingMostEnquired, setLoadingMostEnquired] = useState(true);
   const [mostSearchedData, setMostSearchedData] = useState([]);
   const [loadingMostSearched, setLoadingMostSearched] = useState(true);
+   const [userId, setUserId] = useState(null);
 
 
 
   const getColor = (tabName) => (activeTab === tabName ? '#00A4C9' : '#666');
+
+
+   useEffect(() => {
+    const loadUserId = async () => {
+      try {
+        const storedUserId = await AsyncStorage.getItem('userId');
+        if (storedUserId) {
+          setUserId(storedUserId);
+          console.log('Loaded user ID:', storedUserId);
+        }
+      } catch (error) {
+        console.error('Failed to load user ID:', error);
+      }
+    };
+
+    loadUserId();
+  }, []);
 
 
    // Function to fetch Trending Products from API
@@ -295,7 +313,7 @@ export default function Home() {
     contentContainerStyle={styles.imageScrollContainer}
     scrollEventThrottle={16}
     renderItem={({ item }) => (
-      <TouchableOpacity  onPress={() =>router.push({ pathname: '/components/Shop', params: { cat_id: item.id } })}>
+      <TouchableOpacity  onPress={() =>router.push({ pathname: '/components/Shop', params: { cat_id: item.id,customer_id: userId  } })}>
         <View style={styles.overlayImageWrapper}>
         
           <Image source={item.background} style={styles.overlayBaseImage} />
@@ -326,7 +344,7 @@ export default function Home() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.trendingContainer}
             renderItem={({ item }) => (
-              <TouchableOpacity onPress={() =>router.push({ pathname: '/components/Shop', params: { cat_id: item.master_id } })}>
+              <TouchableOpacity onPress={() =>router.push({ pathname: '/components/Shop', params: { cat_id: item.master_id,customer_id: userId  } })}>
                 <LinearGradient
                   colors={['#1789AE', '#132740']}
                   style={styles.trendingBox}
@@ -354,7 +372,7 @@ export default function Home() {
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.mostEnquiredScrollContainer}
       renderItem={({ item }) => (
-        <TouchableOpacity onPress={() =>router.push({ pathname: '/components/Shop', params: { cat_id: item.master_id } })}>
+        <TouchableOpacity onPress={() =>router.push({ pathname: '/components/Shop', params: { cat_id: item.master_id,customer_id: userId  } })}>
           <View style={styles.mostEnquiredBox}>
             <Image
               source={{ uri: item.image || 'https://veebuilds.com/master/assets/images/default.jpg' }}

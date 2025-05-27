@@ -3,35 +3,77 @@ import React, { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import { useRouter } from 'expo-router';
-import logoimg from '../../assets/images/veebuilder.png';
+import { useRouter,useLocalSearchParams } from 'expo-router';
+
 
 export default function Realestate() {
   const [realEstateData, setRealEstateData] = useState([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const { cat_id, customer_id } = params;
 
   useEffect(() => {
-    axios.get('https://veebuilds.com/mobile/all_land_list.php')
-      .then(response => {
-        setRealEstateData(response.data.storeList);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error('Error fetching real estate data', error);
-        setLoading(false);
+  axios.get('https://veebuilds.com/mobile/all_land_list.php')
+    .then(response => {
+      const processedData = response.data.storeList.map(item => {
+        // Clean up the URL path
+        const baseUrl = item.url.replace('/master//', '/master/');
+        
+        // Extract first image from the string
+        let firstImage = '';
+        try {
+          // Remove the square brackets and split by comma
+          const imagesString = item.siteimg.replace(/^\[|\]$/g, '');
+          const imagesArray = imagesString.split(', ')
+            .map(img => img.trim())
+            .filter(img => img.length > 0);
+          
+          if (imagesArray.length > 0) {
+            firstImage = baseUrl + imagesArray[0];
+          }
+        } catch (e) {
+          console.log('Error parsing images', e);
+        }
+        console.log('Vendor ID:', item.vendor_id);
+        
+        return {
+          ...item,
+          firstImage
+        };
       });
-  }, []);
+      
+      setRealEstateData(processedData);
+      setLoading(false);
+    })
+    .catch(error => {
+      console.error('Error fetching real estate data', error);
+      setLoading(false);
+    });
+}, []);
 
   const renderCard = ({ item }) => (
     <TouchableOpacity onPress={() => router.push(`/components/Landdetails?id=${item.id}`)} style={styles.card}>
-      <Image source={logoimg} style={styles.logo} />
+      {/* Use the actual property image if available, otherwise a placeholder */}
+      {item.firstImage ? (
+        <Image 
+          source={{ uri: item.firstImage }} 
+          style={styles.propertyImage}
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={[styles.propertyImage, styles.placeholderImage]}>
+          <Ionicons name="image" size={50} color="#ccc" />
+        </View>
+      )}
+      
       <View style={{ flex: 1 }}>
         <View style={styles.cardTextContainer}>
           <Text style={styles.title}>{item.land_brocker}</Text>
-          <Text style={styles.subText}>{item.land_area}</Text>
-          <Text style={styles.subText}>{item.land_size} sq ft</Text>
-          <Text style={styles.subText}>₹ {item.cost_per_sq} per sq ft</Text>
+          <Text style={styles.subText}>Location: {item.land_area}</Text>
+          <Text style={styles.subText}>Size: {item.land_size} sq ft</Text>
+          <Text style={styles.subText}>Price: ₹{item.cost_per_sq} per sq ft</Text>
+          <Text style={styles.subText}>Type: {item.property_type}</Text>
         </View>
         {/* Buttons inside card */}
         <View style={styles.buttonRow}>
@@ -39,10 +81,22 @@ export default function Realestate() {
             <Ionicons name="call" size={16} color="white" style={styles.icon} />
             <Text style={styles.buttonText}>Call</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.button}>
-            <Ionicons name="information-circle" size={16} color="white" style={styles.icon} />
-            <Text style={styles.buttonText}>Enquiry Now</Text>
-          </TouchableOpacity>
+           <TouchableOpacity 
+           style={styles.button} 
+          onPress={() => 
+         router.push({
+          pathname: '/components/EnquiryRealHire',
+          params: { 
+            cat_id: cat_id,          // from your current component's params or state
+            land_id: item.id,        // the current land item id
+            v_id: item.vendor_id || '', // example vendor id if exists on item
+      }
+    })
+  }
+>
+  <Ionicons name="information-circle" size={16} color="white" style={styles.icon} />
+  <Text style={styles.buttonText}>Enquiry</Text>
+</TouchableOpacity>
           <TouchableOpacity style={styles.button}>
             <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
             <Text style={styles.buttonText}>WhatsApp</Text>
@@ -77,7 +131,7 @@ export default function Realestate() {
 
       <FlatList
         data={realEstateData}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderCard}
         contentContainerStyle={{ paddingBottom: 20 }}
       />
@@ -120,12 +174,16 @@ const styles = StyleSheet.create({
     elevation: 3,
     alignItems: 'flex-start',
   },
-  logo: {
+  propertyImage: {
     width: 150,
     height: 150,
-    resizeMode: 'contain',
+    borderRadius: 8,
     marginRight: 16,
-    bottom: 20,
+  },
+  placeholderImage: {
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cardTextContainer: {
     marginBottom: 12,
