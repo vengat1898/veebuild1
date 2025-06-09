@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 // Images
 import hot_enqiury from '../../assets/images/hot_enqiury.jpg';
 import hire_people from '../../assets/images/hire_people.jpg';
@@ -186,26 +187,38 @@ export default function Home() {
   }, []);
 
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
+  const handleLogout = async () => {
+  Alert.alert(
+    'Logout',
+    'Are you sure you want to logout?',
+    [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Logout',
+        onPress: async () => {
+          try {
+            // Clear AsyncStorage (remove user session data)
+            await AsyncStorage.clear();
+            // Or if you only want to remove specific items:
+            // await AsyncStorage.removeItem('userId');
+            // await AsyncStorage.removeItem('userToken');
+            
+            // Navigate to login screen and reset navigation history
+            router.replace('/components/Login'); // Using replace to prevent going back
+          } catch (error) {
+            console.error('Logout error:', error);
+            Alert.alert('Error', 'Failed to logout properly');
+          }
         },
-        {
-          text: 'Logout',
-          onPress: () => {
-            router.push('/components/Login'); // Replace to prevent going back
-          },
-          style: 'destructive',
-        },
-      ],
-      { cancelable: true }
-    );
-  };
+        style: 'destructive',
+      },
+    ],
+    { cancelable: true }
+  );
+};
 
 
   const fetchMostSearchedProducts = async () => {
@@ -237,6 +250,7 @@ export default function Home() {
   
 
   return (
+    <SafeAreaView style={styles.safeArea}> 
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
@@ -462,11 +476,11 @@ export default function Home() {
       <MaterialIcons name="arrow-drop-down" size={20} color="#000" />
     </TouchableOpacity>
 
-    <TouchableOpacity style={styles.drawerItem} >
-      <MaterialIcons name="exit-to-app" size={24} color="#000" />
-      <Text style={styles.drawerLabel}>Logout</Text>
-      <MaterialIcons name="arrow-drop-down" size={20} color="#000" />
-    </TouchableOpacity>
+    <TouchableOpacity style={styles.drawerItem} onPress={handleLogout}>
+  <MaterialIcons name="exit-to-app" size={24} color="#000" />
+  <Text style={styles.drawerLabel}>Logout</Text>
+  <MaterialIcons name="arrow-drop-down" size={20} color="#000" />
+</TouchableOpacity>
 
 
   </View>
@@ -474,14 +488,19 @@ export default function Home() {
 
 
     </View>
+     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+   safeArea: {
+    flex: 1,
+    backgroundColor: '#1789AE' // Match your header color
+  },
   container: { flex: 1, backgroundColor: '#fff' },
   scrollContainer: { paddingBottom: 20 },
   header: {
-    paddingTop: 50,
+    paddingTop: 15,
     paddingHorizontal: 16,
     paddingBottom: 20,
   },

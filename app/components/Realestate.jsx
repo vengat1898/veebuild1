@@ -188,22 +188,25 @@ const styles = StyleSheet.create({
   cardTextContainer: {
     marginBottom: 12,
     left: 20,
+    gap: 8,
   },
   title: {
     fontWeight: 'bold',
     fontSize: 16,
     marginBottom: 6,
+   
   },
   subText: {
     fontSize: 11,
     color: '#555',
     marginBottom: 4,
+   
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 70,
     gap: 12,
     marginRight: 180,
   },

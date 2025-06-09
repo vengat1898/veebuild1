@@ -33,6 +33,7 @@ export default function Shop() {
   const [typeLoading, setTypeLoading] = useState(false);
   const [brandLoading, setBrandLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedBrands, setSelectedBrands] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -108,13 +109,51 @@ export default function Shop() {
     });
   };
 
-  const applyTypeFilter = () => {
-    setModalVisible(false);
-    // Here you would typically filter the vendors based on selected types
-    // You might need to make another API call with the selected types
-    console.log('Selected types:', selectedTypes);
-  };
+  const toggleBrandSelection = (brandId) => {
+  setSelectedBrands((prev) =>
+    prev.includes(brandId)
+      ? prev.filter((id) => id !== brandId)
+      : [...prev, brandId]
+  );
+};
 
+
+
+const applyTypeFilter = async () => {
+  setModalVisible(false);
+  setLoading(true);
+
+  try {
+    const typeQuery = selectedTypes.join(',');
+    // const brandQuery = selectedBrand; // Optional: use if you're applying brand filter too
+    const brandQuery = selectedBrands.join(','); // ✅ Multiple brands
+
+
+    // Construct the API URL
+    const apiUrl = `https://veebuilds.com/mobile/vendor_list.php?category_id=${cat_id}&customer_id=${customer_id}&type_id=${typeQuery}&brand=${brandQuery}`;
+
+    // Log the URL
+    console.log('Fetching vendors with URL:', apiUrl);
+
+    // Make API call
+    const response = await axios.get(apiUrl);
+
+    // Log the full response
+    console.log('API Response type:', response.data);
+
+    if (response.data.result === 'Success') {
+      setVendors(response.data.storeList);
+    } else {
+      setVendors([]);
+      Alert.alert('No vendors found for selected filters.');
+    }
+  } catch (error) {
+    console.error('Error applying filter:', error);
+    Alert.alert('Error', 'Failed to apply filter.');
+  } finally {
+    setLoading(false);
+  }
+};
   const clearTypeFilter = () => {
     setSelectedTypes([]);
     setModalVisible(false);
@@ -122,16 +161,40 @@ export default function Shop() {
   };
 
   const handleBrandModalOpen = async () => {
-    if (selectedTypes.length === 0) {
-      Alert.alert('Please select at least one type first');
-      return;
-    }
-    
-    // For simplicity, we'll use the first selected type to fetch brands
-    // In a real app, you might want to handle multiple types differently
     await fetchBrands(selectedTypes[0]);
     setBrandModalVisible(true);
   };
+
+// brand apply
+const applyBrandFilter = async () => {
+  try {
+    setBrandModalVisible(false);
+    setLoading(true);
+
+    // Convert selectedBrands array to comma-separated string
+    const brandIds = selectedBrands.join(',');
+    const apiUrl = `https://veebuilds.com/mobile/type_list_customer_new.php?cat_id=${cat_id}&customer_id=${customer_id}&brand_id=[${brandIds}]`;
+    
+    console.log('API URL:', apiUrl); // Log the URL
+    
+    // Make the API call
+    const response = await axios.get(apiUrl);
+
+    console.log('API Response:', response.data); // Log the full response
+
+    if (response.data.storeList && response.data.storeList.length > 0) {
+      // Handle successful response
+      Alert.alert('Success', 'Brand filter applied successfully');
+    } else {
+      Alert.alert('No Results', 'No products found for selected brands');
+    }
+  } catch (error) {
+    console.error('Error applying brand filter:', error);
+    Alert.alert('Error', 'Failed to apply brand filter');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const renderCard = ({ item }) => (
     <View style={styles.card}>
@@ -340,34 +403,37 @@ export default function Shop() {
               <FlatList
                 data={brands}
                 keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setSelectedBrand(item.title);
-                      setBrandModalVisible(false);
-                      // Here you would typically filter vendors by the selected brand
-                    }}
-                    style={styles.brandOption}
-                  >
-                    <Image 
-                      source={{ uri: item.image }} 
-                      style={styles.brandImage} 
-                      resizeMode="contain"
-                    />
-                    <Text style={styles.brandText}>{item.title}</Text>
-                  </TouchableOpacity>
-                )}
+                renderItem={({ item }) => {
+              const isSelected = selectedBrands.includes(item.id);
+              return (
+              <View style={styles.brandOption}>
+             <Checkbox
+             value={isSelected}
+              onValueChange={() => toggleBrandSelection(item.id)}
+             color={isSelected ? '#1789AE' : undefined}
+             />
+           <Image 
+             source={{ uri: item.image }} 
+            style={styles.brandImage} 
+            resizeMode="contain"
+           />
+            <Text style={styles.brandText}>{item.title}</Text>
+           </View>
+          );
+         }}
+
               />
             ) : (
               <Text style={styles.noBrandsText}>No brands available for selected type</Text>
             )}
-            
-            <TouchableOpacity 
-              onPress={() => setBrandModalVisible(false)} 
-              style={styles.modalCloseButton}
+
+            <TouchableOpacity
+            onPress={applyBrandFilter}
+            style={styles.modalConfirmButton}
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+            <Text style={styles.modalConfirmText}>Apply</Text>
             </TouchableOpacity>
+
           </View>
         </View>
       </Modal>
@@ -441,6 +507,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
     right: 160,
+    marginTop:10
   },
   button: {
     flexDirection: 'row',
@@ -567,6 +634,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
+  modalConfirmButton: {
+  backgroundColor: '#1789AE',
+  paddingVertical: 12,
+  paddingHorizontal: 25,
+  borderRadius: 8,
+  alignItems: 'center',
+  justifyContent: 'center',
+  alignSelf: 'center',
+  marginTop: 10,
+},
+
+modalConfirmText: {
+  color: 'white',
+  fontSize: 16,
+  fontWeight: 'bold',
+}  
 });
 
 

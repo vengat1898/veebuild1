@@ -20,8 +20,8 @@ export default function HirepeopleEnquiry() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-//   const { cat_id, land_id, v_id, product_id } = params;
-const { cat_id, land_id, v_id, product_id, city: professionalCity } = params;
+  // Destructure with product_name instead of product_id
+  const { cat_id, land_id, v_id, product_name, city: professionalCity } = params;
 
   const [userId, setUserId] = useState('');
   const [name, setName] = useState('');
@@ -30,50 +30,19 @@ const { cat_id, land_id, v_id, product_id, city: professionalCity } = params;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [city, setCity] = useState('');
 
-//   useEffect(() => {
-//     const fetchUserProfile = async () => {
-//       try {
-//         const id = await AsyncStorage.getItem('userId');
-//         if (id) {
-//           setUserId(id);
-//           await AsyncStorage.setItem('cat_id', cat_id?.toString() || '');
-//           await AsyncStorage.setItem('land_id', land_id?.toString() || '');
-//           await AsyncStorage.setItem('v_id', v_id?.toString() || '');
-
-//           const profileUrl = `https://veebuilds.com/mobile/profile_fetch.php?id=${id}`;
-//           const response = await axios.get(profileUrl);
-//           if (response.data.success === 1) {
-//             const profile = response.data;
-//             setName(profile.name || '');
-//             setMobile(profile.mobile || '');
-//           } else {
-//             Alert.alert('Error', 'Failed to load user profile.');
-//           }
-//         }
-//       } catch (error) {
-//         Alert.alert('Error', 'Could not fetch profile information.');
-//       }
-//     };
-
-//     fetchUserProfile();
-//   }, []);
-
-
-useEffect(() => {
+  useEffect(() => {
     const fetchUserProfile = async () => {
       try {
         const id = await AsyncStorage.getItem('userId');
         if (id) {
           setUserId(id);
-          // ... (other AsyncStorage operations remain the same)
-
           const profileUrl = `https://veebuilds.com/mobile/profile_fetch.php?id=${id}`;
           const response = await axios.get(profileUrl);
           if (response.data.success === 1) {
             const profile = response.data;
             setName(profile.name || '');
             setMobile(profile.mobile || '');
-            setCity(profile.city || professionalCity || ''); // Use user's city or professional's city
+            setCity(profile.city || professionalCity || '');
           }
         }
       } catch (error) {
@@ -87,8 +56,8 @@ useEffect(() => {
   const handleSubmit = async () => {
     if (isSubmitting) return;
     
-    if (!product_id && !v_id) {
-      Alert.alert('Error', 'Product information is missing');
+    if (!product_name) {
+      Alert.alert('Error', 'Professional information is missing');
       return;
     }
 
@@ -99,14 +68,14 @@ useEffect(() => {
 
     setIsSubmitting(true);
     
-     const params = {
+    const params = {
       user_id: userId,
       name,
       mobile,
       message,
-      product_name: product_id || v_id,
+      product_name: product_name, // Using professional's name here
       vendor_id: v_id,
-      city: city, // Now using the actual city value
+      city: city, 
     };
 
     console.log('Sending enquiry with params:', params);
@@ -169,6 +138,14 @@ useEffect(() => {
           onChangeText={setMobile}
         />
 
+        {/* <Text style={styles.label}>City</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your city"
+          value={city}
+          onChangeText={setCity}
+        /> */}
+
         <Text style={styles.label}>Message</Text>
         <TextInput
           style={[styles.input, { height: 100 }]}
@@ -195,6 +172,8 @@ useEffect(() => {
   );
 }
 
+
+
 const styles = StyleSheet.create({
   header: {
     height: Platform.OS === 'ios' ? 130 : 120,
@@ -214,7 +193,7 @@ const styles = StyleSheet.create({
     marginTop: Platform.OS === 'ios' ? 35 : 30,
   },
   container: {
-    padding: 20,
+    padding: 35,
     backgroundColor: '#fff',
   },
   label: {
@@ -227,7 +206,7 @@ const styles = StyleSheet.create({
     borderColor: '#1789AE',
     borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 18,
     marginBottom: 20,
   },
   submitButton: {

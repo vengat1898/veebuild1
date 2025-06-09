@@ -522,7 +522,7 @@ export default function HirepeopleDetails1() {
           style={styles.button}
           onPress={() =>
             router.push({
-              pathname: '/components/EnquiryRealHire',
+              pathname: '/components/HirepeopleEnquiry',
               params: {
                 cat_id,
                 land_id: person.id,
