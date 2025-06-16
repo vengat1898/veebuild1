@@ -172,51 +172,51 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 15,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
     justifyContent: 'space-between',
-    height: 120,
+    height: 120, // Reduced header height
   },
   backButton: {
     marginRight: 12,
-    marginTop: 40,
+    marginTop: 35, // Adjusted position
   },
   backIconContainer: {
-    padding: 8,
+    padding: 6, // Smaller padding
     top: 3,
   },
   headerText: {
-    fontSize: 20,
+    fontSize: 18, // Smaller font size
     fontWeight: 'bold',
     color: '#fff',
     flex: 1,
     textAlign: 'left',
-    marginTop: 40,
+    marginTop: 35, // Adjusted position
   },
   statusContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 20,
-    paddingHorizontal: 20,
-    marginLeft: 10,
+    marginTop: 15, // Reduced margin
+    paddingHorizontal: 15, // Reduced padding
+    marginLeft: 5, // Reduced margin
   },
   statusButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
+    paddingVertical: 8, // Smaller padding
+    paddingHorizontal: 23, // Smaller padding
+    borderRadius: 5, // Slightly smaller radius
     backgroundColor: '#eee',
-    borderWidth: 2,
+    borderWidth: 1, // Thinner border
     borderColor: '#1789AE',
     marginHorizontal: 2,
-    right: 15,
+    right: 10, // Adjusted position
   },
   selectedStatusButton: {
     backgroundColor: '#1789AE',
   },
   statusButtonText: {
-    fontSize: 16,
+    fontSize: 14, // Smaller font
     color: '#333',
     fontWeight: 'bold',
   },
@@ -224,39 +224,39 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   detailsBox: {
-    marginTop: 20,
-    marginHorizontal: 20,
-    padding: 20,
-    borderWidth: 2,
+    marginTop: 15, // Reduced margin
+    marginHorizontal: 15, // Reduced margin
+    padding: 15, // Reduced padding
+    borderWidth: 1, // Thinner border
     borderColor: '#1789AE',
-    borderRadius: 10,
+    borderRadius: 8, // Slightly smaller radius
     backgroundColor: '#fff',
-    elevation: 5,
+    elevation: 3, // Reduced shadow
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 }, // Smaller shadow
+    shadowOpacity: 0.1, // Lighter shadow
+    shadowRadius: 3, // Smaller radius
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-    paddingVertical: 4,
+    marginBottom: 6, // Reduced spacing
+    paddingVertical: 2, // Reduced padding
   },
   label: {
-    width: 130,
-    fontSize: 16,
+    width: 110, // Slightly narrower
+    fontSize: 14, // Smaller font
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'left',
   },
   value: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14, // Smaller font
     color: '#555',
     textAlign: 'right',
   },
-})
+});
 
 
 

@@ -111,54 +111,46 @@ export default function Shop() {
   };
 
   const toggleBrandSelection = (brandId) => {
-  setSelectedBrands((prev) =>
-    prev.includes(brandId)
-      ? prev.filter((id) => id !== brandId)
-      : [...prev, brandId]
-  );
-};
+    setSelectedBrands((prev) =>
+      prev.includes(brandId)
+        ? prev.filter((id) => id !== brandId)
+        : [...prev, brandId]
+    );
+  };
 
+  const applyTypeFilter = async () => {
+    setModalVisible(false);
+    setLoading(true);
 
+    try {
+      const typeQuery = selectedTypes.join(',');
+      const brandQuery = selectedBrands.join(',');
 
-const applyTypeFilter = async () => {
-  setModalVisible(false);
-  setLoading(true);
+      const apiUrl = `https://veebuilds.com/mobile/vendor_list.php?category_id=${cat_id}&customer_id=${customer_id}&type_id=${typeQuery}&brand=${brandQuery}`;
 
-  try {
-    const typeQuery = selectedTypes.join(',');
-    // const brandQuery = selectedBrand; // Optional: use if you're applying brand filter too
-    const brandQuery = selectedBrands.join(','); // ✅ Multiple brands
+      console.log('Fetching vendors with URL:', apiUrl);
 
+      const response = await axios.get(apiUrl);
 
-    // Construct the API URL
-    const apiUrl = `https://veebuilds.com/mobile/vendor_list.php?category_id=${cat_id}&customer_id=${customer_id}&type_id=${typeQuery}&brand=${brandQuery}`;
+      console.log('API Response type:', response.data);
 
-    // Log the URL
-    console.log('Fetching vendors with URL:', apiUrl);
-
-    // Make API call
-    const response = await axios.get(apiUrl);
-
-    // Log the full response
-    console.log('API Response type:', response.data);
-
-    if (response.data.result === 'Success') {
-      setVendors(response.data.storeList);
-    } else {
-      setVendors([]);
-      Alert.alert('No vendors found for selected filters.');
+      if (response.data.result === 'Success') {
+        setVendors(response.data.storeList);
+      } else {
+        setVendors([]);
+        Alert.alert('No vendors found for selected filters.');
+      }
+    } catch (error) {
+      console.error('Error applying filter:', error);
+      Alert.alert('Error', 'Failed to apply filter.');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error applying filter:', error);
-    Alert.alert('Error', 'Failed to apply filter.');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
+
   const clearTypeFilter = () => {
     setSelectedTypes([]);
     setModalVisible(false);
-    // Reset the vendors list to original unfiltered state
   };
 
   const handleBrandModalOpen = async () => {
@@ -166,146 +158,110 @@ const applyTypeFilter = async () => {
     setBrandModalVisible(true);
   };
 
-// brand apply
-const applyBrandFilter = async () => {
-  try {
-    setBrandModalVisible(false);
-    setLoading(true);
+  const applyBrandFilter = async () => {
+    try {
+      setBrandModalVisible(false);
+      setLoading(true);
 
-    // Convert selectedBrands array to comma-separated string
-    const brandIds = selectedBrands.join(',');
-    const apiUrl = `https://veebuilds.com/mobile/type_list_customer_new.php?cat_id=${cat_id}&customer_id=${customer_id}&brand_id=[${brandIds}]`;
-    
-    console.log('API URL:', apiUrl); // Log the URL
-    
-    // Make the API call
-    const response = await axios.get(apiUrl);
+      const brandIds = selectedBrands.join(',');
+      const apiUrl = `https://veebuilds.com/mobile/type_list_customer_new.php?cat_id=${cat_id}&customer_id=${customer_id}&brand_id=[${brandIds}]`;
+      
+      console.log('API URL:', apiUrl);
+      
+      const response = await axios.get(apiUrl);
 
-    console.log('API Response:', response.data); // Log the full response
+      console.log('API Response:', response.data);
 
-    if (response.data.storeList && response.data.storeList.length > 0) {
-      // Handle successful response
-      Alert.alert('Success', 'Brand filter applied successfully');
-    } else {
-      Alert.alert('No Results', 'No products found for selected brands');
+      if (response.data.storeList && response.data.storeList.length > 0) {
+        Alert.alert('Success', 'Brand filter applied successfully');
+      } else {
+        Alert.alert('No Results', 'No products found for selected brands');
+      }
+    } catch (error) {
+      console.error('Error applying brand filter:', error);
+      Alert.alert('Error', 'Failed to apply brand filter');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error applying brand filter:', error);
-    Alert.alert('Error', 'Failed to apply brand filter');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const renderCard = ({ item }) => (
     <View style={styles.card}>
-      <Image
-        source={item.shop_image ? { uri: item.shop_image } : require('../../assets/images/veebuilder.png')}
-        style={styles.logo}
-      />
-      <View style={{ flex: 1 }}>
-        <TouchableOpacity
-          // onPress={() => router.push({
-          //   pathname: '/components/Shopdetails',
-          //   params: { 
-          //     vendor_id: item.id,
-          //     shopName: item.name,
-          //     shopImage: item.shop_image,
-          //     mobile: item.mobile,
-          //     whatsapp: item.whatsapp,
-          //     email: item.email,
-          //     experience: item.yera_of_exp,
-          //     location: item.location,
-          //     city: item.city,
-          //     state: item.state,
-          //     country: item.country,
-          //     rattings: item.rattings,
-          //     enquery: item.enquery
-          //   }
-          // })}
-           onPress={() => {
-            console.log('Navigating to Shopdetails with:', {
-              vendor_id: item.id,
-              cat_id,
-              customer_id,
-              shopName: item.name,
-              shopImage: item.shop_image,
-              mobile: item.mobile,
-              whatsapp: item.whatsapp,
-              email: item.email,
-              experience: item.yera_of_exp,
-              location: item.location,
-              city: item.city,
-              state: item.state,
-              country: item.country
-            });
-            
-            router.push({
-              pathname: '/components/Shopdetails',
-              params: { 
-                vendor_id: item.id,
-                cat_id,        // Explicitly pass category ID
-                customer_id,    // Explicitly pass customer ID
-                shopName: item.name,
-                shopImage: item.shop_image,
-                mobile: item.mobile,
-                whatsapp: item.whatsapp,
-                email: item.email,
-                experience: item.yera_of_exp,
-                location: item.location,
-                city: item.city,
-                state: item.state,
-                country: item.country,
-                rattings: item.rattings,
-                enquery: item.enquery
-              }
-            });
-          }}
-          style={styles.cardTextContainer}
-        >
-          <View style={styles.textGroup}>
-            <Text style={styles.title}>{item.name}</Text>
-            <Text style={styles.subText}>{item.distance} km away</Text>
-            <Text style={styles.subText}>{item.city}</Text>
-            <Text style={styles.subText}>{item.yera_of_exp} years in business</Text>
-            <Text style={styles.subText}>{item.enquery} enquiries answered</Text>
-          </View>
-        </TouchableOpacity>
-
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.button} onPress={() => {
-            if (item.mobile) {
-              Alert.alert('Call', `Would you like to call ${item.mobile}?`);
-            } else {
-              Alert.alert('No phone number available');
-            }
-          }}>
-            <Ionicons name="call" size={16} color="white" style={styles.icon} />
-            <Text style={styles.buttonText}>Call</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-  style={styles.button} 
-  onPress={() => router.push({
-    pathname: '/components/Enquiry',
-    params: { cat_id, customer_id }
-  })}
->
-  <Ionicons name="information-circle" size={16} color="white" style={styles.icon} />
-  <Text style={styles.buttonText}>Enquiry</Text>
-</TouchableOpacity>
-
-          <TouchableOpacity style={styles.button} onPress={() => {
-            if (item.whatsapp) {
-              Alert.alert('WhatsApp', `Would you like to message ${item.whatsapp}?`);
-            } else {
-              Alert.alert('No WhatsApp number available');
-            }
-          }}>
-            <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
-            <Text style={styles.buttonText}>WhatsApp</Text>
+      <View style={styles.cardContent}>
+        <Image
+          source={item.shop_image ? { uri: item.shop_image } : require('../../assets/images/veebuilder.png')}
+          style={styles.logo}
+        />
+        <View style={styles.textGroupContainer}>
+          <TouchableOpacity
+            onPress={() => {
+              console.log('Navigating to Shopdetails...');
+              router.push({
+                pathname: '/components/Shopdetails',
+                params: { 
+                  vendor_id: item.id,
+                  cat_id,
+                  customer_id,
+                  shopName: item.name,
+                  shopImage: item.shop_image,
+                  mobile: item.mobile,
+                  whatsapp: item.whatsapp,
+                  email: item.email,
+                  experience: item.yera_of_exp,
+                  location: item.location,
+                  city: item.city,
+                  state: item.state,
+                  country: item.country,
+                  rattings: item.rattings,
+                  enquery: item.enquery
+                }
+              });
+            }}
+            style={styles.cardTextContainer}
+          >
+            <View style={styles.textGroup}>
+              <Text style={styles.title}>{item.name}</Text>
+              <Text style={styles.subText}>{item.distance} km away</Text>
+              <Text style={styles.subText}>{item.city}</Text>
+              <Text style={styles.subText}>{item.yera_of_exp} years in business</Text>
+              <Text style={styles.subText}>{item.enquery} enquiries answered</Text>
+            </View>
           </TouchableOpacity>
         </View>
+      </View>
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.button} onPress={() => {
+          if (item.mobile) {
+            Alert.alert('Call', `Would you like to call ${item.mobile}?`);
+          } else {
+            Alert.alert('No phone number available');
+          }
+        }}>
+          <Ionicons name="call" size={16} color="white" style={styles.icon} />
+          <Text style={styles.buttonText}>Call</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.button} 
+          onPress={() => router.push({
+            pathname: '/components/Enquiry',
+            params: { cat_id, customer_id }
+          })}
+        >
+          <Ionicons name="information-circle" size={16} color="white" style={styles.icon} />
+          <Text style={styles.buttonText}>Enquiry</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.button} onPress={() => {
+          if (item.whatsapp) {
+            Alert.alert('WhatsApp', `Would you like to message ${item.whatsapp}?`);
+          } else {
+            Alert.alert('No WhatsApp number available');
+          }
+        }}>
+          <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
+          <Text style={styles.buttonText}>WhatsApp</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -443,36 +399,34 @@ const applyBrandFilter = async () => {
                 data={brands}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => {
-              const isSelected = selectedBrands.includes(item.id);
-              return (
-              <View style={styles.brandOption}>
-             <Checkbox
-             value={isSelected}
-              onValueChange={() => toggleBrandSelection(item.id)}
-             color={isSelected ? '#1789AE' : undefined}
-             />
-           <Image 
-             source={{ uri: item.image }} 
-            style={styles.brandImage} 
-            resizeMode="contain"
-           />
-            <Text style={styles.brandText}>{item.title}</Text>
-           </View>
-          );
-         }}
-
+                  const isSelected = selectedBrands.includes(item.id);
+                  return (
+                    <View style={styles.brandOption}>
+                      <Checkbox
+                        value={isSelected}
+                        onValueChange={() => toggleBrandSelection(item.id)}
+                        color={isSelected ? '#1789AE' : undefined}
+                      />
+                      <Image 
+                        source={{ uri: item.image }} 
+                        style={styles.brandImage} 
+                        resizeMode="contain"
+                      />
+                      <Text style={styles.brandText}>{item.title}</Text>
+                    </View>
+                  );
+                }}
               />
             ) : (
               <Text style={styles.noBrandsText}>No brands available for selected type</Text>
             )}
 
             <TouchableOpacity
-            onPress={applyBrandFilter}
-            style={styles.modalConfirmButton}
+              onPress={applyBrandFilter}
+              style={styles.modalConfirmButton}
             >
-            <Text style={styles.modalConfirmText}>Apply</Text>
+              <Text style={styles.modalConfirmText}>Apply</Text>
             </TouchableOpacity>
-
           </View>
         </View>
       </Modal>
@@ -481,7 +435,10 @@ const applyBrandFilter = async () => {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#fff' 
+  },
   header: {
     height: 120,
     paddingTop: 20,
@@ -490,8 +447,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1789AE',
   },
-  backButton: { marginRight: 10 },
-  headerText: { color: 'white', fontSize: 20, fontWeight: 'bold' },
+  backButton: { 
+    marginRight: 10 
+  },
+  headerText: { 
+    color: 'white', 
+    fontSize: 20, 
+    fontWeight: 'bold' 
+  },
   searchContainer: {
     flexDirection: 'row',
     borderWidth: 0.2,
@@ -501,8 +464,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 4,
   },
-  searchIcon: { marginRight: 8 },
-  searchInput: { flex: 1, height: 40, color: '#000' },
+  searchIcon: { 
+    marginRight: 8 
+  },
+  searchInput: { 
+    flex: 1, 
+    height: 40, 
+    color: '#000' 
+  },
   dropdownRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -519,12 +488,19 @@ const styles = StyleSheet.create({
     height: 50,
     width: '48%',
   },
-  dropdownIcon: { marginRight: 8 },
-  dropdownText: { flex: 1, color: '#000', fontSize: 10 },
-  dropdownArrow: { marginRight: 8 },
+  dropdownIcon: { 
+    marginRight: 8 
+  },
+  dropdownText: { 
+    flex: 1, 
+    color: '#000', 
+    fontSize: 10 
+  },
+  dropdownArrow: { 
+    marginRight: 8 
+  },
   card: {
     backgroundColor: '#fff',
-    flexDirection: 'row',
     padding: 16,
     margin: 16,
     borderRadius: 12,
@@ -533,20 +509,46 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 3,
-    alignItems: 'flex-start',
-    height: 250,
+    minHeight: 250,
   },
-  logo: { width: 150, height: 150, resizeMode: 'contain', marginRight: 16 },
-  cardTextContainer: { marginBottom: 12, left: 20, gap: 8 },
-  textGroup: { marginBottom: 12, gap: 8 },
-  title: { fontWeight: 'bold', fontSize: 16, marginBottom: 6 },
-  subText: { fontSize: 11, color: '#555', marginBottom: 4 },
+  cardContent: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  logo: {
+    width: '40%',
+    height: 150,
+    resizeMode: 'contain',
+    backgroundColor: "#f0f0f0",
+  },
+  textGroupContainer: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  textGroup: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    gap: 8,
+  },
+  title: {
+    fontWeight: 'bold',
+    fontSize: 15,
+    color: '#333',
+    textAlign: 'left',
+  },
+  subText: {
+    fontSize: 12,
+    color: '#555',
+    textAlign: 'left',
+  },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
-    right: 160,
-    marginTop:10
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 'auto',
+    paddingTop: 16,
+    gap: 8,
   },
   button: {
     flexDirection: 'row',
@@ -554,13 +556,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#1789AE',
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 8,
     borderRadius: 10,
-    width: 98,
-    height: 40,
+    flex: 1,
+    minHeight: 40,
+    maxWidth: '32%',
   },
-  buttonText: { color: 'white', fontSize: 10, fontWeight: 'bold' },
-  icon: { marginRight: 4 },
+  buttonText: { 
+    color: 'white', 
+    fontSize: 10, 
+    fontWeight: 'bold',
+    marginLeft: 4
+  },
+  icon: { 
+    // Removed marginRight to use marginLeft in buttonText instead
+  },
   modalBackground: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -597,19 +607,19 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     fontSize: 16,
     color: '#333',
-    gap: 70
+    flex: 1
   },
   modalButtonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 16,
+    gap: 16,
   },
   modalButton: {
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
     flex: 1,
-    marginHorizontal: 8,
   },
   clearButton: {
     backgroundColor: '#f1f1f1',
@@ -638,10 +648,12 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     marginRight: 12,
+    marginLeft: 12,
   },
   brandText: {
     fontSize: 16,
     color: '#333',
+    flex: 1,
   },
   noBrandsText: {
     textAlign: 'center',
@@ -673,25 +685,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   modalConfirmButton: {
-  backgroundColor: '#1789AE',
-  paddingVertical: 12,
-  paddingHorizontal: 25,
-  borderRadius: 8,
-  alignItems: 'center',
-  justifyContent: 'center',
-  alignSelf: 'center',
-  marginTop: 10,
-},
-
-modalConfirmText: {
-  color: 'white',
-  fontSize: 16,
-  fontWeight: 'bold',
-}  
+    backgroundColor: '#1789AE',
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginTop: 10,
+  },
+  modalConfirmText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: 'bold',
+  }  
 });
-
 
 
  
