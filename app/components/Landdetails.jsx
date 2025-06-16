@@ -7,7 +7,7 @@ import axios from 'axios';
 
 export default function Landdetails() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id, cat_id, customer_id } = useLocalSearchParams();
   const [landDetails, setLandDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -78,7 +78,8 @@ export default function Landdetails() {
     property_type,
     cost_per_sq,
     tot_cost,
-    mobile
+    mobile,
+    vendor_id
   } = landDetails;
 
   return (
@@ -157,7 +158,20 @@ export default function Landdetails() {
           <Ionicons name="call" size={16} color="white" style={styles.icon} />
           <Text style={styles.buttonText}>Call</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button}>
+        <TouchableOpacity 
+          style={styles.button}
+          onPress={() => 
+            router.push({
+              pathname: '/components/EnquiryRealHire',
+              params: { 
+                cat_id: cat_id || '',          // passed from previous screen
+                land_id: id,                   // current land id
+                v_id: vendor_id || '',         // vendor id from land details
+                customer_id: customer_id || '' // passed from previous screen
+              }
+            })
+          }
+        >
           <Ionicons name="information-circle" size={16} color="white" style={styles.icon} />
           <Text style={styles.buttonText}>Enquiry</Text>
         </TouchableOpacity>

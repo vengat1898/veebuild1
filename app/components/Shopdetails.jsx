@@ -1,33 +1,53 @@
-import { StyleSheet, Text, View, TouchableOpacity, Image, ScrollView, ActivityIndicator, Linking, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Image, ScrollView, ActivityIndicator, Linking, Alert,SafeAreaView,Platform } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import axios from 'axios';
-import { useLocalSearchParams } from 'expo-router';
 
 export default function Shopdetails() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  
+  // Debug all incoming parameters
+  console.log('Shopdetails received ALL params:', params);
+
+  // Robust parameter extraction with multiple fallbacks
+  const vendor_id = params.vendor_id || params.vendor || params.id;
+  const cat_id = params.cat_id || params.category_id || 'unknown_category';
+  const customer_id = params.customer_id || params.user_id || 'unknown_customer';
+
+  console.log('Processed parameters:', {
+    vendor_id,
+    cat_id,
+    customer_id
+  });
+
   const [activeTab, setActiveTab] = useState('Quick Info');
   const [vendorData, setVendorData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const params = useLocalSearchParams();
-  const vendor_id = params.vendor_id || params.vendor;
 
   useEffect(() => {
+    console.log('Starting to fetch vendor details for:', vendor_id);
     const fetchVendorDetails = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(
-          `https://veebuilds.com/mobile/vendor_details.php?vendor_id=${vendor_id}`
-        );
+        const url = `https://veebuilds.com/mobile/vendor_details.php?vendor_id=${vendor_id}`;
+        console.log('Fetching from URL:', url);
+        
+        const response = await axios.get(url);
+        console.log('API response:', response.data);
 
         if (response.data?.result === "Success" && response.data.storeList?.length > 0) {
           setVendorData(response.data.storeList[0]);
+          console.log('Vendor data successfully set');
         } else {
-          Alert.alert('Error', response.data?.text || 'No vendor details found');
+          const errorMsg = response.data?.text || 'No vendor details found';
+          console.warn('API error:', errorMsg);
+          Alert.alert('Error', errorMsg);
         }
       } catch (err) {
+        console.error('Fetch failed:', err);
         Alert.alert('Error', err.message);
       } finally {
         setLoading(false);
@@ -38,6 +58,7 @@ export default function Shopdetails() {
   }, [vendor_id]);
 
   const handleCall = () => {
+    console.log('Call initiated with number:', vendorData?.mobile);
     if (vendorData?.mobile) {
       Linking.openURL(`tel:${vendorData.mobile}`);
     } else {
@@ -46,6 +67,7 @@ export default function Shopdetails() {
   };
 
   const handleWhatsApp = () => {
+    console.log('WhatsApp initiated with:', vendorData?.whatsapp || vendorData?.mobile);
     if (vendorData?.whatsapp) {
       Linking.openURL(`https://wa.me/${vendorData.whatsapp}`);
     } else if (vendorData?.mobile) {
@@ -56,16 +78,41 @@ export default function Shopdetails() {
   };
 
   const handleEnquiry = () => {
+    console.log('Initiating enquiry with params:', {
+      vendor_id,
+      cat_id,
+      customer_id,
+      shopName: vendorData?.name,
+      shopImage: vendorData?.shop_image
+    });
+    
+    if (!vendorData) {
+      Alert.alert('Error', 'Vendor information not loaded');
+      return;
+    }
+    
     router.push({
       pathname: '/components/Enquiry',
       params: {
-        vendor_id: vendor_id,
-        shopName: vendorData?.name || '',
+        vendor_id,
+        cat_id,
+        customer_id,
+        shopName: vendorData.name || '',
+        shopImage: vendorData.shop_image || '',
+        mobile: vendorData.mobile || '',
+        whatsapp: vendorData.whatsapp || '',
+        email: vendorData.email || '',
+        experience: vendorData.yera_of_exp || '',
+        location: vendorData.location || '',
+        city: vendorData.city || '',
+        state: vendorData.state || '',
+        country: vendorData.country || ''
       }
     });
   };
 
   if (loading) {
+    console.log('Loading state - showing spinner');
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#1789AE" />
@@ -74,6 +121,7 @@ export default function Shopdetails() {
   }
 
   if (!vendorData) {
+    console.log('No vendor data state - showing error');
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Text>Failed to load vendor details.</Text>
@@ -84,7 +132,10 @@ export default function Shopdetails() {
     );
   }
 
+  console.log('Rendering vendor details UI');
+
   return (
+    <SafeAreaView style={styles.safeArea}> 
     <View style={{ flex: 1 }}>
       <LinearGradient
         colors={['#1789AE', '#132740']}
@@ -213,16 +264,22 @@ export default function Shopdetails() {
         </TouchableOpacity>
       </View>
     </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    
+  },
   header: {
-    height: 120,
-    paddingTop: 20,
-    paddingHorizontal: 16,
+    height: 160,
+    paddingTop: Platform.OS === 'ios' ? 0 : 20,
+    paddingHorizontal: 26,
     flexDirection: 'row',
     alignItems: 'center',
+    bottom:60,
   },
   backButton: {
     marginRight: 10,
@@ -233,25 +290,28 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginTop:30
+    
   },
   scrollContent: {
-    padding: 16,
+    padding: 10,
     alignItems: 'flex-start',
+    
   },
   box: {
-    width: '100%',
+    width: '70%',
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 10,
     padding: 16,
-    alignItems: 'flex-start',
-    marginBottom: 20,
+    alignItems:'center',
+    marginBottom: 50,
     backgroundColor: 'white',
   },
   logo: {
-    width: 120,
-    height: 120,
+    width: 140,
+    height: 140,
     borderRadius: 10,
+    alignItems:'center'
   },
   nameText: {
     fontSize: 24,

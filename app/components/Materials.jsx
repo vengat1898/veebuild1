@@ -83,10 +83,7 @@ export default function Materials({ navigation }) {
     }
   };
 
-  // useEffect(() => {
-  //   fetchCategories();
-  //   fetchMainCategories(); 
-  // }, []);
+ 
 
   useEffect(() => {
   const getUserId = async () => {
@@ -130,6 +127,7 @@ export default function Materials({ navigation }) {
           placeholder="Search materials..."
           style={styles.searchInput}
           placeholderTextColor="#888"
+          onPress={() => router.push('/components/Search')}
         />
       </View>
 
@@ -199,7 +197,7 @@ export default function Materials({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   header: {
-    height: 100,
+    height: 130,
     paddingTop: 40,
     paddingHorizontal: 16,
     flexDirection: 'row',

@@ -21,6 +21,7 @@ export default function Shop() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { cat_id, customer_id } = params;
+  console.log('Shop screen received params:', params);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [brandModalVisible, setBrandModalVisible] = useState(false);
@@ -204,10 +205,29 @@ const applyBrandFilter = async () => {
       />
       <View style={{ flex: 1 }}>
         <TouchableOpacity
-          onPress={() => router.push({
-            pathname: '/components/Shopdetails',
-            params: { 
+          // onPress={() => router.push({
+          //   pathname: '/components/Shopdetails',
+          //   params: { 
+          //     vendor_id: item.id,
+          //     shopName: item.name,
+          //     shopImage: item.shop_image,
+          //     mobile: item.mobile,
+          //     whatsapp: item.whatsapp,
+          //     email: item.email,
+          //     experience: item.yera_of_exp,
+          //     location: item.location,
+          //     city: item.city,
+          //     state: item.state,
+          //     country: item.country,
+          //     rattings: item.rattings,
+          //     enquery: item.enquery
+          //   }
+          // })}
+           onPress={() => {
+            console.log('Navigating to Shopdetails with:', {
               vendor_id: item.id,
+              cat_id,
+              customer_id,
               shopName: item.name,
               shopImage: item.shop_image,
               mobile: item.mobile,
@@ -217,11 +237,30 @@ const applyBrandFilter = async () => {
               location: item.location,
               city: item.city,
               state: item.state,
-              country: item.country,
-              rattings: item.rattings,
-              enquery: item.enquery
-            }
-          })}
+              country: item.country
+            });
+            
+            router.push({
+              pathname: '/components/Shopdetails',
+              params: { 
+                vendor_id: item.id,
+                cat_id,        // Explicitly pass category ID
+                customer_id,    // Explicitly pass customer ID
+                shopName: item.name,
+                shopImage: item.shop_image,
+                mobile: item.mobile,
+                whatsapp: item.whatsapp,
+                email: item.email,
+                experience: item.yera_of_exp,
+                location: item.location,
+                city: item.city,
+                state: item.state,
+                country: item.country,
+                rattings: item.rattings,
+                enquery: item.enquery
+              }
+            });
+          }}
           style={styles.cardTextContainer}
         >
           <View style={styles.textGroup}>

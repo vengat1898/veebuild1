@@ -10,6 +10,7 @@ import {
   Dimensions,
   Alert
 } from 'react-native';
+import * as Location from 'expo-location';
 import React, { useState, useRef, useEffect} from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, FontAwesome, Ionicons, Entypo } from '@expo/vector-icons';
@@ -110,6 +111,47 @@ export default function Home() {
   const [mostSearchedData, setMostSearchedData] = useState([]);
   const [loadingMostSearched, setLoadingMostSearched] = useState(true);
    const [userId, setUserId] = useState(null);
+
+const [currentLocation, setCurrentLocation] = useState('chennai');
+const [locationPermission, setLocationPermission] = useState(false);
+
+
+ useEffect(() => {
+    (async () => {
+      // Request location permission
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Permission to access location was denied');
+        return;
+      }
+
+      setLocationPermission(true);
+      
+      // Get current location
+      try {
+        let location = await Location.getCurrentPositionAsync({});
+        const address = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+        
+        if (address.length > 0) {
+          const locality = address[0].district || address[0].subregion || address[0].region || 'Your Location';
+          setCurrentLocation(locality);
+          
+          // Optionally save to AsyncStorage
+          await AsyncStorage.setItem('userLocation', locality);
+        }
+      } catch (error) {
+        console.error('Error getting location:', error);
+        // Fallback to saved location if available
+        const savedLocation = await AsyncStorage.getItem('userLocation');
+        if (savedLocation) {
+          setCurrentLocation(savedLocation);
+        }
+      }
+    })();
+  }, []);
 
 
 
@@ -262,9 +304,10 @@ export default function Home() {
         <View style={styles.headerContent}>
         <TouchableOpacity style={styles.locationWrapper} onPress={() => router.push('/components/Location')}>
           <MaterialIcons name="location-on" size={20} color="orange" />
-          <Text style={styles.locationText}>Old Pallavaram</Text>
+          <Text style={styles.locationText}>{currentLocation}</Text>
           <MaterialIcons name="arrow-drop-down" size={20} color="orange" />
         </TouchableOpacity>
+
 
           <TouchableOpacity onPress={() => router.push('/components/profile')}>
           <View style={styles.profileCircle}>
