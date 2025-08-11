@@ -10,68 +10,82 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { FontAwesome } from '@expo/vector-icons';
 import logoimg from '../../assets/images/veebuilder.png';
-import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import axios from 'axios';
 import * as Location from 'expo-location';
+import { SessionContext } from '../../context/SessionContext';
 
 export default function Register() {
+  const router = useRouter();
+  const { saveSession, session } = useContext(SessionContext);
+  const params = useLocalSearchParams();
+
   const [name, setName] = useState('');
-  const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [location, setLocation] = useState(null);
-  const [permissionGranted, setPermissionGranted] = useState(false);
-  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  // Get mobile and userId from params or session
+  const mobile = params.mobile || session?.mobile || '';
+  const userId = params.userId || session?.id || '';
 
   // Function to handle location permissions and fetch location
   const getLocationPermission = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status === 'granted') {
-      setPermissionGranted(true);
-      const currentLocation = await Location.getCurrentPositionAsync({});
-      setLocation(currentLocation);
-      console.log('Location:', currentLocation);
-    } else {
-      Alert.alert('Permission Denied', 'Location permission is required.');
+    setLocationLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const currentLocation = await Location.getCurrentPositionAsync({});
+        setLocation(currentLocation);
+        console.log('Location fetched:', currentLocation);
+      } else {
+        Alert.alert(
+          'Location Permission', 
+          'Location access helps us serve you better. Please enable it in settings.'
+        );
+      }
+    } catch (error) {
+      console.error('Location Error:', error);
+      Alert.alert('Error', 'Failed to get location. Using default values.');
+    } finally {
+      setLocationLoading(false);
     }
   };
 
   useEffect(() => {
-    const loadMobile = async () => {
-      const savedMobile = await AsyncStorage.getItem('mobile');
-      if (savedMobile) {
-        setMobile(savedMobile);
-        console.log('Loaded mobile:', savedMobile);
-      } else {
-        console.warn('No mobile number found in AsyncStorage.');
-      }
-    };
-    loadMobile();
-
-    // Request location permission on component mount
     getLocationPermission();
   }, []);
 
   const handleRegister = async () => {
-    if (!name || !email) {
-      Alert.alert('Validation Error', 'Please enter your name and email.');
+    if (!name.trim()) {
+      Alert.alert('Validation Error', 'Please enter your name');
       return;
     }
 
-    if (!email.includes('gmail.com')) {
-      Alert.alert('Invalid Email', 'Please enter a valid Gmail address.');
+    if (!email.trim() || !email.includes('@')) {
+      Alert.alert('Validation Error', 'Please enter a valid email address');
       return;
     }
 
+    if (!userId) {
+      Alert.alert('Error', 'User ID not found. Please try the OTP process again.');
+      return;
+    }
+
+    setIsLoading(true);
     try {
       const requestData = {
         mobile,
-        name,
-        email,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        type: '1', // Assuming type 1 is for this user type
+        userId: userId // Make sure to include userId in the request
       };
 
       // Add location data if available
@@ -80,43 +94,68 @@ export default function Register() {
         requestData.gst_lattitude = latitude.toString();
         requestData.gst_longitude = longitude.toString();
 
-        // Optionally, get city from coordinates
+        // Get address details from coordinates
         const geocode = await Location.reverseGeocodeAsync({ latitude, longitude });
-        const city = geocode[0]?.city || 'Unknown City';
-        requestData.location = city;  // Set location based on geocoded city
-        requestData.city = city;
-      } else {
-        // Fallback values if location is not available
-        requestData.location = 'Default Location';  // Set a fallback location name
-        requestData.gst_lattitude = '0.0';  // Default latitude
-        requestData.gst_longitude = '0.0';  // Default longitude
-        requestData.city = 'Default City';  // Default city
+        if (geocode.length > 0) {
+          requestData.city = geocode[0]?.city || 'Unknown City';
+          requestData.location = [
+            geocode[0]?.street,
+            geocode[0]?.city,
+            geocode[0]?.region,
+            geocode[0]?.postalCode,
+            geocode[0]?.country
+          ].filter(Boolean).join(', ');
+        }
       }
 
-      console.log('Registering with data:', requestData);
+      console.log('Registration data:', requestData);
 
-      const response = await axios.get('https://veebuilds.com/mobile/register.php', {
-        params: requestData,
-      });
+      // Using POST with FormData instead of GET with params
+      const formData = new FormData();
+      for (const key in requestData) {
+        formData.append(key, requestData[key]);
+      }
+
+      const response = await axios.post(
+        'https://veebuilds.com/mobile/register.php',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
 
       const data = response.data;
-      console.log('API response:', data);
+      console.log('Registration response:', data);
 
       if (data.success === 1) {
-  const storeId = data.storeList?.[0]?.id;
-  if (storeId) {
-    await AsyncStorage.setItem('userId', storeId.toString());
-    console.log('User ID saved:', storeId);
-  }
-  console.log('Registration success');
-  router.push({ pathname: '/components/Home' });
-}
- else {
-        Alert.alert('Registration Failed', data.text || 'Please try again.');
+        // Update session with complete user data
+        await saveSession({
+          ...session,
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          id: userId, // Use the userId we already have
+          location: requestData.location || 'Default Location',
+          city: requestData.city || 'Default City'
+        });
+
+        router.replace({
+          pathname: '/components/Home',
+          params: { userId } // Pass userId to Home screen
+        });
+      } else {
+        Alert.alert('Registration Failed', data.text || 'Please try again later.');
       }
     } catch (error) {
       console.error('Registration Error:', error);
-      Alert.alert('Error', 'Something went wrong. Please try again later.');
+      Alert.alert(
+        'Error', 
+        error.response?.data?.message || 
+        'Failed to register. Please check your connection and try again.'
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -128,7 +167,7 @@ export default function Register() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
           <Image source={logoimg} style={styles.logo} resizeMode="contain" />
-          <Text style={styles.heading}>Register</Text>
+          <Text style={styles.heading}>Complete Registration</Text>
 
           <View style={styles.inputWrapper}>
             <FontAwesome name="user" size={20} color="#1e90ff" style={styles.icon} />
@@ -137,16 +176,16 @@ export default function Register() {
               placeholder="Full Name"
               value={name}
               onChangeText={setName}
+              autoCapitalize="words"
             />
           </View>
 
           <View style={styles.inputWrapper}>
             <FontAwesome name="phone" size={20} color="#1e90ff" style={styles.icon} />
             <TextInput
-              style={[styles.input, { color: '#555' }]}
+              style={[styles.input, styles.disabledInput]}
               value={mobile}
               editable={false}
-              selectTextOnFocus={false}
             />
           </View>
 
@@ -154,16 +193,35 @@ export default function Register() {
             <FontAwesome name="envelope" size={20} color="#1e90ff" style={styles.icon} />
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder="Email (e.g., example@gmail.com)"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
               value={email}
               onChangeText={setEmail}
             />
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleRegister}>
-            <Text style={styles.buttonText}>Register</Text>
+          <View style={styles.locationStatus}>
+            {locationLoading ? (
+              <ActivityIndicator size="small" color="#1e90ff" />
+            ) : location ? (
+              <Text style={styles.locationText}>📍 Location captured</Text>
+            ) : (
+              <Text style={styles.locationText}>⚠️ Using default location</Text>
+            )}
+          </View>
+
+          <TouchableOpacity 
+            style={styles.button} 
+            onPress={handleRegister}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Complete Registration</Text>
+            )}
           </TouchableOpacity>
         </View>
       </TouchableWithoutFeedback>
@@ -194,35 +252,45 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderColor: 'gray',
+    borderColor: '#ddd',
     borderWidth: 1,
-    borderRadius: 5,
+    borderRadius: 8,
     marginBottom: 15,
-    paddingHorizontal: 10,
+    paddingHorizontal: 15,
     backgroundColor: '#fff',
-    zIndex: 1,
+    height: 50,
   },
   icon: {
     marginRight: 10,
   },
   input: {
     flex: 1,
-    height: 50,
+    height: '100%',
+    fontSize: 16,
+  },
+  disabledInput: {
+    color: '#666',
+    backgroundColor: '#f5f5f5',
   },
   button: {
     height: 50,
     backgroundColor: '#1e90ff',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 5,
-    marginTop: 10,
+    borderRadius: 8,
+    marginTop: 20,
   },
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
   },
+  locationStatus: {
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  locationText: {
+    fontSize: 14,
+    color: '#666',
+  },
 });
-
-
-

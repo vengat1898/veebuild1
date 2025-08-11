@@ -1,3 +1,4 @@
+
 import {
   StyleSheet,
   Text,
@@ -10,24 +11,31 @@ import {
   Platform,
   Keyboard,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from 'react-native';
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useContext } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import otpimg from '../../assets/images/otp.png';
+import { SessionContext } from '../../context/SessionContext';
 
 export default function Otp() {
   const router = useRouter();
+  const { saveSession } = useContext(SessionContext);
   const { otp: initialOtp, mobile: initialMobile, userId: initialUserId } = useLocalSearchParams();
 
   const [otp, setOtp] = useState(['', '', '', '']);
   const inputRefs = useRef([]);
-  const [mobile, setMobile] = useState(initialMobile || '');
-  const [userId, setUserId] = useState(initialUserId || '');
+  const [isLoading, setIsLoading] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
+    console.log('Received params:', {
+      otp: initialOtp,
+      mobile: initialMobile,
+      userId: initialUserId
+    });
+    
     const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
     const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
     return () => {
@@ -45,39 +53,135 @@ export default function Otp() {
     }
   };
 
+
+
   const handleVerify = async () => {
-    const otpCode = otp.join('');
-    if (otpCode.length < 4) {
-      Alert.alert('Error', 'Please enter a valid 4-digit OTP.');
-      return;
+  const otpCode = otp.join('');
+  console.log('Verifying OTP:', otpCode);
+  console.log('For mobile:', initialMobile);
+  console.log('User ID:', initialUserId);
+
+  if (otpCode.length < 4) {
+    Alert.alert('Error', 'Please enter a valid 4-digit OTP.');
+    return;
+  }
+
+  setIsLoading(true);
+  
+  try {
+    const formData = new FormData();
+    formData.append('type', '1');
+    formData.append('otp', otpCode);
+    formData.append('mobile', initialMobile);
+   if (initialUserId) {
+      formData.append('userId', initialUserId);
     }
 
+    const response = await axios.post(
+      'https://veebuilds.com/mobile/otp_verify.php',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+
+    console.log('Server response:', response.data);
+
+    // if (response.data.success === 1 || response.data.result === "Success") {
+    //   // Modified this part to handle the actual response structure
+    //   const userData = {
+    //     id: response.data.id.toString(), // Ensure ID is string
+    //   mobile: initialMobile,
+    //   type: '1',
+    //   name: response.data.name || '',
+    //   email: response.data.email || '',
+    //   sec_mobile: response.data.sec_mobile || ''
+    //   };
+
+    //   await saveSession(userData);
+
+    if (response.data.success === 1) {
+      console.log("=========userId"+response.data.id.toString());
+      
+      const userData = {
+        id: response.data.id.toString(),
+        mobile: initialMobile,
+        type: '1',
+        name: response.data.name || '',
+        email: response.data.email || '',
+        sec_mobile: response.data.sec_mobile || ''
+      };
+
+      await saveSession(userData);
+      
+      if (response.data.register_status === 1) {
+        router.replace('/components/Home');
+      } else {
+        router.replace('/components/Register');
+      }
+    } else {
+      Alert.alert(
+        'Verification Failed',
+        response.data.text || response.data.message || 'Invalid OTP'
+      );
+    }
+  } catch (error) {
+    console.error('Verification error:', error);
+    let errorMessage = 'Something went wrong. Please try again.';
+    
+    if (error.response) {
+      errorMessage = error.response.data.text || 
+                    error.response.data.message || 
+                    JSON.stringify(error.response.data);
+    } else if (error.request) {
+      errorMessage = 'No response from server';
+    }
+    
+    Alert.alert('Error', errorMessage);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+  const handleResendOtp = async () => {
     try {
+      const formData = new FormData();
+      formData.append('type', '1');
+      formData.append('mobile', initialMobile);
+
       const response = await axios.post(
-        `https://veebuilds.com/mobile/otp_verify.php?type=1&otp=${otpCode}&mobile=${mobile}`
+        'https://veebuilds.com/mobile/login.php',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
       );
 
-      if (response.data.success === 1) {
-        await AsyncStorage.setItem('mobile', mobile);
-        await AsyncStorage.setItem('userId', userId);
-        await AsyncStorage.setItem('isVerified', 'true');
-
-        router.push('/components/Register');
+      if (response.data.success == 1) {
+        Alert.alert('Success', 'New OTP has been sent to your mobile number.');
       } else {
-        Alert.alert('Error', 'Invalid OTP, please try again.');
+        Alert.alert('Error', response.data.message || 'Failed to resend OTP');
       }
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      Alert.alert('Error', error.response?.data?.message || 'Something went wrong. Please try again.');
     }
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      style={{ flex: 1 }}
+    >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
           <Image source={otpimg} style={styles.logo} resizeMode="contain" />
-          <Text style={styles.heading}>OTP</Text>
+          <Text style={styles.heading}>OTP Verification</Text>
+          <Text style={styles.subtitle}>Enter the OTP sent to {initialMobile}</Text>
 
           <View style={styles.otpContainer}>
             {otp.map((digit, index) => (
@@ -89,17 +193,29 @@ export default function Otp() {
                 keyboardType="numeric"
                 value={digit}
                 onChangeText={(text) => handleOtpChange(text, index)}
+                editable={!isLoading}
               />
             ))}
           </View>
 
-          <TouchableOpacity style={styles.verifyButton} onPress={handleVerify}>
-            <Text style={styles.verifyText}>Verify</Text>
+          <TouchableOpacity 
+            style={styles.verifyButton} 
+            onPress={handleVerify}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.verifyText}>Verify</Text>
+            )}
           </TouchableOpacity>
 
           {!keyboardVisible && (
             <Text style={styles.resendText}>
-              Haven't received OTP? <Text style={styles.resendLink}>resend</Text>
+              Haven't received OTP?{' '}
+              <Text style={styles.resendLink} onPress={handleResendOtp}>
+                Resend
+              </Text>
             </Text>
           )}
         </View>
@@ -117,38 +233,46 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   logo: {
-    width: 250,
-    height: 250,
-    alignSelf: 'center',
+    width: 200,
+    height: 200,
     marginBottom: 20,
   },
   heading: {
-    fontSize: 28,
+    fontSize: 24,
     color: '#1e90ff',
     fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
     marginBottom: 30,
   },
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '80%',
+    width: '70%',
     marginBottom: 30,
   },
   otpBox: {
     width: 50,
     height: 50,
-    borderWidth: 2,
+    borderWidth: 1,
+    borderColor: '#1e90ff',
     textAlign: 'center',
     fontSize: 18,
     borderRadius: 8,
-    borderColor: '#1e90ff',
+    backgroundColor: '#f8f9fa',
   },
   verifyButton: {
     backgroundColor: '#1e90ff',
-    paddingVertical: 12,
-    paddingHorizontal: 50,
+    paddingVertical: 15,
+    paddingHorizontal: 60,
     borderRadius: 8,
-    marginBottom: 15,
+    marginBottom: 20,
+    width: '70%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   verifyText: {
     color: '#fff',
@@ -157,11 +281,10 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: 14,
-    color: '#000',
+    color: '#666',
   },
   resendLink: {
-    color: 'red',
+    color: '#1e90ff',
     fontWeight: '600',
   },
 });
-

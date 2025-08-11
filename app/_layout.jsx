@@ -1,15 +1,16 @@
 import { Stack } from 'expo-router';
-import Login from './components/Login';
-import Otp from './components/Otp';
+import { SessionProvider } from '../context/SessionContext';
 
-export default function Layout() {
-
-  
+export default function RootLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }} >
-      <Stack.Screen name='/components/'
-      options={{ headerShown: false }} />
-    </Stack>
+    <SessionProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="Login" />
+        <Stack.Screen name="Otp" />
+        <Stack.Screen name="Home" />
+      </Stack>
+    </SessionProvider>
   );
 }
 
