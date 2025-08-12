@@ -85,7 +85,7 @@ export default function Myenquiry() {
       <View style={styles.footer}>
         <Pressable 
           style={styles.footerItem} 
-          onPress={() => router.push('/components/HomeScreen')}
+          onPress={() => router.push('/components/Home')}
         >
           {({ pressed }) => (
             <>
