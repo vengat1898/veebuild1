@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -8,93 +8,133 @@ import {
   ScrollView,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SessionContext } from '../../context/SessionContext';
 import axios from 'axios';
 
 export default function EnquiryRealHire() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { session, isSessionLoaded } = useContext(SessionContext);
 
-  const { cat_id, land_id, v_id } = params;
+  const { 
+    cat_id, 
+    land_id, 
+    v_id, 
+    product_name, 
+    city: professionalCity,
+    customer_id,
+    user_id
+  } = params;
 
-  const [userId, setUserId] = useState('');
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
-  const [city, setCity] = useState(''); // still used internally
   const [message, setMessage] = useState('');
-  const [productName, setProductName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [city, setCity] = useState('');
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const id = await AsyncStorage.getItem('userId');
-        if (id) {
-          setUserId(id);
-          await AsyncStorage.setItem('cat_id', cat_id?.toString() || '');
-          await AsyncStorage.setItem('land_id', land_id?.toString() || '');
-          await AsyncStorage.setItem('v_id', v_id?.toString() || '');
-
-          const profileUrl = `https://veebuilds.com/mobile/profile_fetch.php?id=${id}`;
-          const response = await axios.get(profileUrl);
-          if (response.data.success === 1) {
-            const profile = response.data;
-            setName(profile.name || '');
-            setMobile(profile.mobile || '');
-            setCity(profile.city || ''); // still set city here
-          } else {
-            Alert.alert('Error', 'Failed to load user profile.');
-          }
-        }
-      } catch (error) {
-        Alert.alert('Error', 'Could not fetch profile information.');
-      }
-    };
-
-    fetchUserProfile();
-  }, []);
+    if (isSessionLoaded && session) {
+      console.log('Session loaded:', session);
+      
+      // Set user details from session
+      setName(session.name || '');
+      setMobile(session.mobile || '');
+      setCity(session.city || professionalCity || '');
+      
+      console.log('Enquiry Parameters:', {
+        cat_id,
+        land_id,
+        v_id,
+        product_name,
+        professionalCity,
+        customer_id,
+        user_id,
+        sessionUserId: session.id
+      });
+    }
+  }, [isSessionLoaded, session]);
 
   const handleSubmit = async () => {
-    if (!name || !mobile || !message) {
-      Alert.alert('Validation Error', 'Please fill in all fields.');
+    if (isSubmitting) return;
+    
+    if (!v_id) {
+      Alert.alert('Error', 'Vendor information is missing');
       return;
     }
 
-    if (!v_id) {
-      Alert.alert('Error', 'Vendor ID is missing.');
+    if (!message) {
+      Alert.alert('Error', 'Please enter your enquiry message');
       return;
     }
+
+    if (!session?.id) {
+      Alert.alert('Error', 'User session not found. Please login again.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    const enquiryParams = {
+      user_id: session.id,
+      customer_id: customer_id || '',
+      name: name.trim(),
+      mobile: mobile.trim(),
+      message: message.trim(),
+      product_name: product_name || `${name} - ${city || 'No city specified'}`,
+      vendor_id: v_id,
+      city: city.trim() || 'Not specified', // Make city optional with fallback
+      land_id: land_id || '',
+      cat_id: cat_id || ''
+    };
+
+    console.log('Submitting enquiry with params:', enquiryParams);
 
     try {
-      const params = {
-        user_id: userId,
-        name,
-        mobile,
-        message,
-        product_name: productName || `${name} - ${city}`,
-        vendor_id: v_id,
-        city,
-        land_id,
-      };
-
       const enquiryUrl = 'https://veebuilds.com/mobile/land_enquery.php';
-      const response = await axios.get(enquiryUrl, { params });
-      const queryString = Object.entries(params)
-      .map(([key, val]) => `${key}=${encodeURIComponent(val)}`)
-      .join('&');
-      console.log('Enquiry Submit URL:', `${enquiryUrl}?${queryString}`);
+      const response = await axios.get(enquiryUrl, {
+        params: enquiryParams
+      });
 
-      if (response.data.success === 1) {
-        Alert.alert('Success', response.data.message || 'Enquiry submitted successfully!');
-        setMessage('');
+      console.log('API Response:', response.data);
+
+      if (response.data.success === 1 || response.data.result === 'success') {
+        Alert.alert('Success', response.data.message || 'Enquiry submitted successfully', [
+          { 
+            text: 'OK', 
+            onPress: () => router.push({
+              pathname: '/components/Home',
+              params: {
+                id: land_id || v_id,
+                title: product_name,
+                cat_id,
+                v_id,
+                user_id: session.id,
+                customer_id
+              }
+            })
+          }
+        ]);
       } else {
-        Alert.alert('Error', response.data.message || 'Failed to submit enquiry.');
+        const errorMessage = response.data.text || response.data.message || 'Something went wrong';
+        Alert.alert('Failed', errorMessage);
       }
     } catch (error) {
-      Alert.alert('Error', 'An error occurred while submitting enquiry.');
+      console.error('Submission Error:', error);
+      let errorMessage = 'Submission failed. Please try again.';
+      if (error.response) {
+        errorMessage = error.response.data.text || 
+                     error.response.data.message || 
+                     errorMessage;
+        console.error('Error Details:', error.response.data);
+      }
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -119,6 +159,7 @@ export default function EnquiryRealHire() {
           placeholder="Enter your name"
           value={name}
           onChangeText={setName}
+          editable={!!session?.name}
         />
 
         <Text style={styles.label}>Mobile Number</Text>
@@ -128,20 +169,38 @@ export default function EnquiryRealHire() {
           value={mobile}
           keyboardType="phone-pad"
           onChangeText={setMobile}
+          editable={false}
         />
 
-        <Text style={styles.label}>Message</Text>
+        {/* Optional City Field - Uncomment if you want to show it */}
+        {/* <Text style={styles.label}>City (Optional)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your city (optional)"
+          value={city}
+          onChangeText={setCity}
+        /> */}
+
+        <Text style={styles.label}>Message*</Text>
         <TextInput
           style={[styles.input, { height: 100 }]}
-          placeholder="Enter your enquiry message"
+          placeholder="Enter your enquiry message (required)"
           multiline
           numberOfLines={4}
           value={message}
           onChangeText={setMessage}
         />
 
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitText}>Submit Enquiry</Text>
+        <TouchableOpacity 
+          style={styles.submitButton} 
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.submitText}>Submit Enquiry</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -178,16 +237,20 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: '#1789AE',
-    borderRadius: 8,
+    borderRadius: 4,
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 12,
     marginBottom: 20,
+    backgroundColor: '#fff',
   },
   submitButton: {
     backgroundColor: '#1789AE',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+    height: 50,
+    marginTop: 10,
   },
   submitText: {
     color: 'white',

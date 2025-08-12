@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -13,17 +13,25 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SessionContext } from '../../context/SessionContext';
 import axios from 'axios';
 
 export default function HirepeopleEnquiry() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { session, isSessionLoaded } = useContext(SessionContext);
 
-  // Destructure with product_name instead of product_id
-  const { cat_id, land_id, v_id, product_name, city: professionalCity } = params;
+  // Destructure parameters
+  const { 
+    cat_id, 
+    land_id, 
+    v_id, 
+    product_name, 
+    city: professionalCity,
+    customer_id,
+    user_id
+  } = params;
 
-  const [userId, setUserId] = useState('');
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [message, setMessage] = useState('');
@@ -31,27 +39,27 @@ export default function HirepeopleEnquiry() {
   const [city, setCity] = useState('');
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const id = await AsyncStorage.getItem('userId');
-        if (id) {
-          setUserId(id);
-          const profileUrl = `https://veebuilds.com/mobile/profile_fetch.php?id=${id}`;
-          const response = await axios.get(profileUrl);
-          if (response.data.success === 1) {
-            const profile = response.data;
-            setName(profile.name || '');
-            setMobile(profile.mobile || '');
-            setCity(profile.city || professionalCity || '');
-          }
-        }
-      } catch (error) {
-        Alert.alert('Error', 'Could not fetch profile information.');
-      }
-    };
-
-    fetchUserProfile();
-  }, []);
+    if (isSessionLoaded && session) {
+      console.log('Session loaded:', session);
+      
+      // Set user details from session
+      setName(session.name || '');
+      setMobile(session.mobile || '');
+      setCity(session.city || professionalCity || '');
+      
+      // Log all parameters for debugging
+      console.log('Enquiry Parameters:', {
+        cat_id,
+        land_id,
+        v_id,
+        product_name,
+        professionalCity,
+        customer_id,
+        user_id,
+        sessionUserId: session.id
+      });
+    }
+  }, [isSessionLoaded, session]);
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
@@ -66,30 +74,50 @@ export default function HirepeopleEnquiry() {
       return;
     }
 
+    if (!session?.id) {
+      Alert.alert('Error', 'User session not found. Please login again.');
+      return;
+    }
+
     setIsSubmitting(true);
     
-    const params = {
-      user_id: userId,
-      name,
-      mobile,
-      message,
-      product_name: product_name, // Using professional's name here
-      vendor_id: v_id,
-      city: city, 
+    const enquiryParams = {
+      user_id: session.id, // Using session user ID
+      customer_id: customer_id || '',
+      name: name.trim(),
+      mobile: mobile.trim(),
+      message: message.trim(),
+      product_name: product_name.trim(), // Professional's name
+      vendor_id: v_id || land_id || '', // Using either v_id or land_id
+      city: city.trim(),
+      cat_id: cat_id || ''
     };
 
-    console.log('Sending enquiry with params:', params);
+    console.log('Submitting enquiry with params:', enquiryParams);
 
     try {
       const response = await axios.get('https://veebuilds.com/mobile/professional_enquery.php', {
-        params,
+        params: enquiryParams
       });
 
-      console.log('API response:', response.data);
+      console.log('API Response:', response.data);
 
       if (response.data.success === 1) {
         Alert.alert('Success', 'Enquiry submitted successfully', [
-          { text: 'OK', onPress: () => router.back() },
+          { 
+            text: 'OK', 
+            onPress: () => router.push({
+              pathname: '/components/Home',
+              params: {
+                id: land_id || v_id,
+                title: product_name,
+                cat_id,
+                v_id,
+                user_id: session.id,
+                customer_id
+              }
+            })
+          }
         ]);
       } else {
         Alert.alert('Failed', response.data.text || 'Something went wrong');
@@ -99,6 +127,7 @@ export default function HirepeopleEnquiry() {
       let errorMessage = 'Submission failed. Please try again.';
       if (error.response) {
         errorMessage = error.response.data.text || errorMessage;
+        console.error('Error Details:', error.response.data);
       }
       Alert.alert('Error', errorMessage);
     } finally {
@@ -127,6 +156,7 @@ export default function HirepeopleEnquiry() {
           placeholder="Enter your name"
           value={name}
           onChangeText={setName}
+          editable={!!session?.name} // Disable if we have session name
         />
 
         <Text style={styles.label}>Mobile Number</Text>
@@ -136,15 +166,16 @@ export default function HirepeopleEnquiry() {
           value={mobile}
           keyboardType="phone-pad"
           onChangeText={setMobile}
+          editable={!!session?.mobile} // Disable if we have session mobile
         />
 
-        {/* <Text style={styles.label}>City</Text>
+        <Text style={styles.label}>City</Text>
         <TextInput
           style={styles.input}
           placeholder="Enter your city"
           value={city}
           onChangeText={setCity}
-        /> */}
+        />
 
         <Text style={styles.label}>Message</Text>
         <TextInput
@@ -171,8 +202,6 @@ export default function HirepeopleEnquiry() {
     </View>
   );
 }
-
-
 
 const styles = StyleSheet.create({
   header: {
@@ -208,6 +237,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 18,
     marginBottom: 20,
+    backgroundColor: '#fff',
   },
   submitButton: {
     backgroundColor: '#1789AE',
@@ -216,6 +246,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: 50,
+    marginTop: 10,
   },
   submitText: {
     color: 'white',

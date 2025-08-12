@@ -8,6 +8,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="Login" />
         <Stack.Screen name="Otp" />
+        <Stack.Screen name="Register" />
         <Stack.Screen name="Home" />
       </Stack>
     </SessionProvider>

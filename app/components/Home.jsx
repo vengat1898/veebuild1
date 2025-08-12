@@ -392,7 +392,7 @@ export default function Home() {
               contentContainerStyle={styles.imageScrollContainer}
               scrollEventThrottle={16}
               renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => router.push({ pathname: '/components/Shop', params: { cat_id: item.id, customer_id: userId } })}>
+                <TouchableOpacity onPress={() => router.push({ pathname: '/components/Shop', params: { cat_id: item.master_id || item.id, customer_id: userId } })}>
                   <View style={styles.overlayImageWrapper}>
                     <Image source={item.background} style={styles.overlayBaseImage} />
                     

@@ -1,27 +1,31 @@
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  TextInput,
-  Image,
-  FlatList,
-  Modal,
-  ActivityIndicator,
-  Alert,
-  ScrollView
-} from 'react-native';
-import React, { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import axios from 'axios';
 import Checkbox from 'expo-checkbox';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState , useContext } from 'react';
+import { SessionContext } from '../../context/SessionContext';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 export default function Shop() {
+  const { session } = useContext(SessionContext);
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { cat_id, customer_id } = params;
+  // const { cat_id, customer_id } = params;
+  console.log('=============================================================');
   console.log('Shop screen received params:', params);
+  console.log('=============================================================');
 
   const [modalVisible, setModalVisible] = useState(false);
   const [brandModalVisible, setBrandModalVisible] = useState(false);
@@ -35,44 +39,99 @@ export default function Shop() {
   const [brandLoading, setBrandLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedBrands, setSelectedBrands] = useState([]);
+ const { cat_id, customer_id: paramCustomerId } = params;
+const customer_id = paramCustomerId || session?.id;
 
+ console.log('=============================================================');
+ console.log('Final cat_id:', cat_id);
+ console.log('Final customer_id:', customer_id);
+ console.log('Session data:', session);
+ console.log('=============================================================');
+ 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        if (!cat_id || !customer_id) {
-          throw new Error('Missing category ID or customer ID');
-        }
+         if (!cat_id) {
+        throw new Error('Missing category ID');
+      }
+      
+      if (!customer_id) {
+        throw new Error('Please login to view this category');
+      }
 
         setLoading(true);
         
         // Fetch vendors
-        const vendorsResponse = await axios.get(
-          `https://veebuilds.com/mobile/vendor_list.php?category_id=${cat_id}&customer_id=${customer_id}`
-        );
+        const vendorUrl = `https://veebuilds.com/mobile/vendor_list.php?category_id=${cat_id}&customer_id=${customer_id}`;
+        console.log('=============================================================');
+        console.log('FETCHING VENDORS');
+        console.log('Vendor URL:', vendorUrl);
+        console.log('=============================================================');
+        
+        const vendorsResponse = await axios.get(vendorUrl);
+        
+        console.log('=============================================================');
+        console.log('VENDOR RESPONSE');
+        console.log('Status:', vendorsResponse.status);
+        console.log('Response Data:', JSON.stringify(vendorsResponse.data, null, 2));
+        console.log('=============================================================');
 
         if (vendorsResponse.data.result === 'Success') {
           setVendors(vendorsResponse.data.storeList);
+          console.log('=============================================================');
+          console.log('VENDORS SET SUCCESSFULLY');
+          console.log('Number of vendors:', vendorsResponse.data.storeList.length);
+          console.log('=============================================================');
         } else {
           setError(vendorsResponse.data.text || 'Failed to fetch vendors');
+          console.log('=============================================================');
+          console.log('VENDOR FETCH FAILED');
+          console.log('Error:', vendorsResponse.data.text);
+          console.log('=============================================================');
         }
 
         // Fetch types
         setTypeLoading(true);
-        const typesResponse = await axios.get(
-          `https://veebuilds.com/mobile/type_list_customer.php?cat_id=${cat_id}&customer_id=${customer_id}`
-        );
+        const typesUrl = `https://veebuilds.com/mobile/type_list_customer.php?cat_id=${cat_id}&customer_id=${customer_id}`;
+        console.log('=============================================================');
+        console.log('FETCHING TYPES');
+        console.log('Types URL:', typesUrl);
+        console.log('=============================================================');
+        
+        const typesResponse = await axios.get(typesUrl);
+        
+        console.log('=============================================================');
+        console.log('TYPES RESPONSE');
+        console.log('Status:', typesResponse.status);
+        console.log('Response Data:', JSON.stringify(typesResponse.data, null, 2));
+        console.log('=============================================================');
 
         if (typesResponse.data.result === 'Success') {
           setTypes(typesResponse.data.storeList);
+          console.log('=============================================================');
+          console.log('TYPES SET SUCCESSFULLY');
+          console.log('Number of types:', typesResponse.data.storeList.length);
+          console.log('=============================================================');
         } else {
-          console.warn('Failed to fetch types:', typesResponse.data.text);
+          console.log('=============================================================');
+          console.log('TYPES FETCH FAILED');
+          console.log('Error:', typesResponse.data.text);
+          console.log('=============================================================');
         }
       } catch (err) {
         setError(err.message);
-        console.error('Error fetching data:', err);
+        console.log('=============================================================');
+        console.log('FETCH DATA ERROR');
+        console.log('Error message:', err.message);
+        console.log('Full error:', err);
+        console.log('=============================================================');
       } finally {
         setLoading(false);
         setTypeLoading(false);
+        console.log('=============================================================');
+        console.log('FETCH DATA COMPLETED');
+        console.log('Loading set to false');
+        console.log('=============================================================');
       }
     };
 
@@ -82,45 +141,93 @@ export default function Shop() {
   const fetchBrands = async (typeId) => {
     try {
       setBrandLoading(true);
-      const response = await axios.get(
-        `https://veebuilds.com/mobile/brand_list_customer.php?cat_id=${cat_id}&customer_id=${customer_id}&type_id=${typeId}`
-      );
+      const brandUrl = `https://veebuilds.com/mobile/brand_list_customer.php?cat_id=${cat_id}&customer_id=${customer_id}&type_id=${typeId}`;
+      console.log('=============================================================');
+      console.log('FETCHING BRANDS');
+      console.log('Brand URL:', brandUrl);
+      console.log('Type ID:', typeId);
+      console.log('=============================================================');
+      
+      const response = await axios.get(brandUrl);
+      
+      console.log('=============================================================');
+      console.log('BRAND RESPONSE');
+      console.log('Status:', response.status);
+      console.log('Response Data:', JSON.stringify(response.data, null, 2));
+      console.log('=============================================================');
       
       if (response.data.result === 'Success') {
         setBrands(response.data.storeList);
+        console.log('=============================================================');
+        console.log('BRANDS SET SUCCESSFULLY');
+        console.log('Number of brands:', response.data.storeList.length);
+        console.log('=============================================================');
       } else {
-        console.warn('Failed to fetch brands:', response.data.text);
+        console.log('=============================================================');
+        console.log('BRAND FETCH FAILED');
+        console.log('Error:', response.data.text);
+        console.log('=============================================================');
         setBrands([]);
       }
     } catch (err) {
-      console.error('Error fetching brands:', err);
+      console.log('=============================================================');
+      console.log('FETCH BRANDS ERROR');
+      console.log('Error message:', err.message);
+      console.log('Full error:', err);
+      console.log('=============================================================');
       setBrands([]);
     } finally {
       setBrandLoading(false);
+      console.log('=============================================================');
+      console.log('FETCH BRANDS COMPLETED');
+      console.log('Brand loading set to false');
+      console.log('=============================================================');
     }
   };
 
   const toggleTypeSelection = (typeId) => {
     setSelectedTypes(prev => {
-      if (prev.includes(typeId)) {
-        return prev.filter(id => id !== typeId);
-      } else {
-        return [...prev, typeId];
-      }
+      const newSelection = prev.includes(typeId) 
+        ? prev.filter(id => id !== typeId)
+        : [...prev, typeId];
+      
+      console.log('=============================================================');
+      console.log('TYPE SELECTION TOGGLED');
+      console.log('Type ID:', typeId);
+      console.log('Previous selection:', prev);
+      console.log('New selection:', newSelection);
+      console.log('=============================================================');
+      
+      return newSelection;
     });
   };
 
   const toggleBrandSelection = (brandId) => {
-    setSelectedBrands((prev) =>
-      prev.includes(brandId)
+    setSelectedBrands((prev) => {
+      const newSelection = prev.includes(brandId)
         ? prev.filter((id) => id !== brandId)
-        : [...prev, brandId]
-    );
+        : [...prev, brandId];
+        
+      console.log('=============================================================');
+      console.log('BRAND SELECTION TOGGLED');
+      console.log('Brand ID:', brandId);
+      console.log('Previous selection:', prev);
+      console.log('New selection:', newSelection);
+      console.log('=============================================================');
+      
+      return newSelection;
+    });
   };
 
   const applyTypeFilter = async () => {
     setModalVisible(false);
     setLoading(true);
+    
+    console.log('=============================================================');
+    console.log('APPLYING TYPE FILTER');
+    console.log('Selected types:', selectedTypes);
+    console.log('Selected brands:', selectedBrands);
+    console.log('=============================================================');
 
     try {
       const typeQuery = selectedTypes.join(',');
@@ -128,77 +235,158 @@ export default function Shop() {
 
       const apiUrl = `https://veebuilds.com/mobile/vendor_list.php?category_id=${cat_id}&customer_id=${customer_id}&type_id=${typeQuery}&brand=${brandQuery}`;
 
-      console.log('Fetching vendors with URL:', apiUrl);
+      console.log('=============================================================');
+      console.log('TYPE FILTER API CALL');
+      console.log('API URL:', apiUrl);
+      console.log('Type Query:', typeQuery);
+      console.log('Brand Query:', brandQuery);
+      console.log('=============================================================');
 
       const response = await axios.get(apiUrl);
 
-      console.log('API Response type:', response.data);
+      console.log('=============================================================');
+      console.log('TYPE FILTER RESPONSE');
+      console.log('Status:', response.status);
+      console.log('Response Data:', JSON.stringify(response.data, null, 2));
+      console.log('=============================================================');
 
       if (response.data.result === 'Success') {
         setVendors(response.data.storeList);
+        console.log('=============================================================');
+        console.log('TYPE FILTER APPLIED SUCCESSFULLY');
+        console.log('Number of vendors after filter:', response.data.storeList.length);
+        console.log('=============================================================');
       } else {
         setVendors([]);
+        console.log('=============================================================');
+        console.log('TYPE FILTER NO RESULTS');
+        console.log('Setting vendors to empty array');
+        console.log('=============================================================');
         Alert.alert('No vendors found for selected filters.');
       }
     } catch (error) {
-      console.error('Error applying filter:', error);
+      console.log('=============================================================');
+      console.log('TYPE FILTER ERROR');
+      console.log('Error message:', error.message);
+      console.log('Full error:', error);
+      console.log('=============================================================');
       Alert.alert('Error', 'Failed to apply filter.');
     } finally {
       setLoading(false);
+      console.log('=============================================================');
+      console.log('TYPE FILTER COMPLETED');
+      console.log('Loading set to false');
+      console.log('=============================================================');
     }
   };
 
   const clearTypeFilter = () => {
+    console.log('=============================================================');
+    console.log('CLEARING TYPE FILTER');
+    console.log('Previous selected types:', selectedTypes);
+    console.log('=============================================================');
+    
     setSelectedTypes([]);
     setModalVisible(false);
+    
+    console.log('=============================================================');
+    console.log('TYPE FILTER CLEARED');
+    console.log('Selected types reset to empty array');
+    console.log('Modal closed');
+    console.log('=============================================================');
   };
 
   const handleBrandModalOpen = async () => {
+    console.log('=============================================================');
+    console.log('OPENING BRAND MODAL');
+    console.log('Selected types:', selectedTypes);
+    console.log('First selected type ID:', selectedTypes[0]);
+    console.log('=============================================================');
+    
     await fetchBrands(selectedTypes[0]);
     setBrandModalVisible(true);
+    
+    console.log('=============================================================');
+    console.log('BRAND MODAL OPENED');
+    console.log('=============================================================');
   };
 
   const applyBrandFilter = async () => {
     try {
       setBrandModalVisible(false);
       setLoading(true);
+      
+      console.log('=============================================================');
+      console.log('APPLYING BRAND FILTER');
+      console.log('Selected brands:', selectedBrands);
+      console.log('=============================================================');
 
       const brandIds = selectedBrands.join(',');
       const apiUrl = `https://veebuilds.com/mobile/type_list_customer_new.php?cat_id=${cat_id}&customer_id=${customer_id}&brand_id=[${brandIds}]`;
       
+      console.log('=============================================================');
+      console.log('BRAND FILTER API CALL');
       console.log('API URL:', apiUrl);
+      console.log('Brand IDs:', brandIds);
+      console.log('=============================================================');
       
       const response = await axios.get(apiUrl);
 
-      console.log('API Response:', response.data);
+      console.log('=============================================================');
+      console.log('BRAND FILTER RESPONSE');
+      console.log('Status:', response.status);
+      console.log('Response Data:', JSON.stringify(response.data, null, 2));
+      console.log('=============================================================');
 
       if (response.data.storeList && response.data.storeList.length > 0) {
+        console.log('=============================================================');
+        console.log('BRAND FILTER SUCCESS');
+        console.log('Number of results:', response.data.storeList.length);
+        console.log('=============================================================');
         Alert.alert('Success', 'Brand filter applied successfully');
       } else {
+        console.log('=============================================================');
+        console.log('BRAND FILTER NO RESULTS');
+        console.log('Store list empty or undefined');
+        console.log('=============================================================');
         Alert.alert('No Results', 'No products found for selected brands');
       }
     } catch (error) {
-      console.error('Error applying brand filter:', error);
+      console.log('=============================================================');
+      console.log('BRAND FILTER ERROR');
+      console.log('Error message:', error.message);
+      console.log('Full error:', error);
+      console.log('=============================================================');
       Alert.alert('Error', 'Failed to apply brand filter');
     } finally {
       setLoading(false);
+      console.log('=============================================================');
+      console.log('BRAND FILTER COMPLETED');
+      console.log('Loading set to false');
+      console.log('=============================================================');
     }
   };
 
-  const renderCard = ({ item }) => (
-    <View style={styles.card}>
-      <View style={styles.cardContent}>
-        <Image
-          source={item.shop_image ? { uri: item.shop_image } : require('../../assets/images/veebuilder.png')}
-          style={styles.logo}
-        />
-        <View style={styles.textGroupContainer}>
-          <TouchableOpacity
-            onPress={() => {
-              console.log('Navigating to Shopdetails...');
-              router.push({
-                pathname: '/components/Shopdetails',
-                params: { 
+  const renderCard = ({ item }) => {
+    console.log('=============================================================');
+    console.log('RENDERING CARD');
+    console.log('Item data:', JSON.stringify(item, null, 2));
+    console.log('=============================================================');
+    
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardContent}>
+          <Image
+            source={item.shop_image ? { uri: item.shop_image } : require('../../assets/images/veebuilder.png')}
+            style={styles.logo}
+          />
+          <View style={styles.textGroupContainer}>
+            <TouchableOpacity
+              onPress={() => {
+                console.log('=============================================================');
+                console.log('NAVIGATING TO SHOP DETAILS');
+                console.log('Vendor ID:', item.id);
+                console.log('Navigation params:', {
                   vendor_id: item.id,
                   cat_id,
                   customer_id,
@@ -214,59 +402,102 @@ export default function Shop() {
                   country: item.country,
                   rattings: item.rattings,
                   enquery: item.enquery
-                }
+                });
+                console.log('=============================================================');
+                
+                router.push({
+                  pathname: '/components/Shopdetails',
+                  params: { 
+                    vendor_id: item.id,
+                    cat_id,
+                    customer_id,
+                    shopName: item.name,
+                    shopImage: item.shop_image,
+                    mobile: item.mobile,
+                    whatsapp: item.whatsapp,
+                    email: item.email,
+                    experience: item.yera_of_exp,
+                    location: item.location,
+                    city: item.city,
+                    state: item.state,
+                    country: item.country,
+                    rattings: item.rattings,
+                    enquery: item.enquery
+                  }
+                });
+              }}
+              style={styles.cardTextContainer}
+            >
+              <View style={styles.textGroup}>
+                <Text style={styles.title}>{item.name}</Text>
+                <Text style={styles.subText}>{item.distance} km away</Text>
+                <Text style={styles.subText}>{item.city}</Text>
+                <Text style={styles.subText}>{item.yera_of_exp} years in business</Text>
+                <Text style={styles.subText}>{item.enquery} enquiries answered</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={styles.button} onPress={() => {
+            console.log('=============================================================');
+            console.log('CALL BUTTON PRESSED');
+            console.log('Mobile number:', item.mobile);
+            console.log('=============================================================');
+            
+            if (item.mobile) {
+              Alert.alert('Call', `Would you like to call ${item.mobile}?`);
+            } else {
+              Alert.alert('No phone number available');
+            }
+          }}>
+            <Ionicons name="call" size={16} color="white" style={styles.icon} />
+            <Text style={styles.buttonText}>Call</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.button} 
+            onPress={() => {
+              console.log('=============================================================');
+              console.log('ENQUIRY BUTTON PRESSED');
+              console.log('Navigation params:', { cat_id, customer_id });
+              console.log('=============================================================');
+              
+              router.push({
+                pathname: '/components/Enquiry',
+                params: { cat_id, customer_id,vendor_id: item.id,shop_name: item.name, }
               });
             }}
-            style={styles.cardTextContainer}
           >
-            <View style={styles.textGroup}>
-              <Text style={styles.title}>{item.name}</Text>
-              <Text style={styles.subText}>{item.distance} km away</Text>
-              <Text style={styles.subText}>{item.city}</Text>
-              <Text style={styles.subText}>{item.yera_of_exp} years in business</Text>
-              <Text style={styles.subText}>{item.enquery} enquiries answered</Text>
-            </View>
+            <Ionicons name="information-circle" size={16} color="white" style={styles.icon} />
+            <Text style={styles.buttonText}>Enquiry</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.button} onPress={() => {
+            console.log('=============================================================');
+            console.log('WHATSAPP BUTTON PRESSED');
+            console.log('WhatsApp number:', item.whatsapp);
+            console.log('=============================================================');
+            
+            if (item.whatsapp) {
+              Alert.alert('WhatsApp', `Would you like to message ${item.whatsapp}?`);
+            } else {
+              Alert.alert('No WhatsApp number available');
+            }
+          }}>
+            <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
+            <Text style={styles.buttonText}>WhatsApp</Text>
           </TouchableOpacity>
         </View>
       </View>
-      <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.button} onPress={() => {
-          if (item.mobile) {
-            Alert.alert('Call', `Would you like to call ${item.mobile}?`);
-          } else {
-            Alert.alert('No phone number available');
-          }
-        }}>
-          <Ionicons name="call" size={16} color="white" style={styles.icon} />
-          <Text style={styles.buttonText}>Call</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.button} 
-          onPress={() => router.push({
-            pathname: '/components/Enquiry',
-            params: { cat_id, customer_id }
-          })}
-        >
-          <Ionicons name="information-circle" size={16} color="white" style={styles.icon} />
-          <Text style={styles.buttonText}>Enquiry</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.button} onPress={() => {
-          if (item.whatsapp) {
-            Alert.alert('WhatsApp', `Would you like to message ${item.whatsapp}?`);
-          } else {
-            Alert.alert('No WhatsApp number available');
-          }
-        }}>
-          <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
-          <Text style={styles.buttonText}>WhatsApp</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  };
 
   if (loading) {
+    console.log('=============================================================');
+    console.log('LOADING STATE ACTIVE');
+    console.log('=============================================================');
+    
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#1789AE" style={styles.loader} />
@@ -275,6 +506,11 @@ export default function Shop() {
   }
 
   if (error) {
+    console.log('=============================================================');
+    console.log('ERROR STATE ACTIVE');
+    console.log('Error:', error);
+    console.log('=============================================================');
+    
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>Error: {error}</Text>
@@ -284,6 +520,14 @@ export default function Shop() {
       </View>
     );
   }
+
+  console.log('=============================================================');
+  console.log('RENDERING MAIN COMPONENT');
+  console.log('Vendors count:', vendors.length);
+  console.log('Types count:', types.length);
+  console.log('Selected types:', selectedTypes);
+  console.log('Selected brands:', selectedBrands);
+  console.log('=============================================================');
 
   return (
     <View style={styles.container}>
@@ -309,7 +553,13 @@ export default function Shop() {
 
       <View style={styles.dropdownRow}>
         <TouchableOpacity 
-          onPress={() => setModalVisible(true)} 
+          onPress={() => {
+            console.log('=============================================================');
+            console.log('TYPE DROPDOWN PRESSED');
+            console.log('Opening type modal');
+            console.log('=============================================================');
+            setModalVisible(true);
+          }} 
           style={styles.dropdownContainer}
         >
           <Ionicons name="list" size={20} color="#888" style={styles.dropdownIcon} />
@@ -322,7 +572,13 @@ export default function Shop() {
         </TouchableOpacity>
 
         <TouchableOpacity 
-          onPress={handleBrandModalOpen} 
+          onPress={() => {
+            console.log('=============================================================');
+            console.log('BRAND DROPDOWN PRESSED');
+            console.log('Opening brand modal');
+            console.log('=============================================================');
+            handleBrandModalOpen();
+          }} 
           style={styles.dropdownContainer}
         >
           <Ionicons name="pricetag" size={20} color="#888" style={styles.dropdownIcon} />
@@ -433,7 +689,6 @@ export default function Shop() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 

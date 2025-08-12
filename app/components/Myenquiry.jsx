@@ -1,37 +1,31 @@
-import { StyleSheet, Text, View, TouchableOpacity, Image, Pressable } from 'react-native'
-import { MaterialIcons, Ionicons } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
-import { useRouter } from 'expo-router'
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, Image, Pressable } from 'react-native';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useContext } from 'react';
 
-import material from '../../assets/images/hirepeople.png'
-import realestate from '../../assets/images/real.png'
-import hirepeople from '../../assets/images/hirepeople.png'
+import material from '../../assets/images/hirepeople.png';
+import realestate from '../../assets/images/real.png';
+import hirepeople from '../../assets/images/hirepeople.png';
+import { SessionContext } from '../../context/SessionContext'; // Adjust path as needed
 
 export default function Myenquiry() {
-  const router = useRouter()
-   const [userId, setUserId] = useState(null);
+  const router = useRouter();
+  const { session, isSessionLoaded } = useContext(SessionContext);
 
   const handlePress = (type) => {
-    router.push({ pathname: '/components/MyenquiryDetails', params: { title: type ,customer_id: userId  }, })
-  }
-
-    useEffect(() => {
-    const loadUserId = async () => {
-      try {
-        const storedUserId = await AsyncStorage.getItem('userId');
-        if (storedUserId) {
-          setUserId(storedUserId);
-          console.log('Loaded user ID:', storedUserId);
-        }
-      } catch (error) {
-        console.error('Failed to load user ID:', error);
-      }
-    };
-
-    loadUserId();
-  }, []);
+    if (session && session.id) {
+      router.push({ 
+        pathname: '/components/MyenquiryDetails', 
+        params: { 
+          title: type,
+          customer_id: session.id 
+        }, 
+      });
+    } else {
+      console.log('No user session found');
+    }
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -89,7 +83,10 @@ export default function Myenquiry() {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Pressable style={styles.footerItem} >
+        <Pressable 
+          style={styles.footerItem} 
+          onPress={() => router.push('/components/HomeScreen')}
+        >
           {({ pressed }) => (
             <>
               <Ionicons
@@ -104,7 +101,10 @@ export default function Myenquiry() {
           )}
         </Pressable>
 
-        <Pressable style={styles.footerItem} >
+        <Pressable 
+          style={styles.footerItem} 
+          onPress={() => router.push('/components/Myenquiry')}
+        >
           {({ pressed }) => (
             <>
               <MaterialIcons
@@ -120,7 +120,7 @@ export default function Myenquiry() {
         </Pressable>
       </View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -131,17 +131,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
-    height:120
+    height: 120
   },
   backButton: {
     marginRight: 12,
-    marginTop:40
+    marginTop: 40
   },
   headerText: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
-    marginTop:40
+    marginTop: 40
   },
   container: {
     flex: 1,
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
-})
+});
 
 
 

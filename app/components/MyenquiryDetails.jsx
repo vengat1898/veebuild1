@@ -1,75 +1,62 @@
-import { StyleSheet, Text, View, TouchableOpacity, FlatList } from 'react-native'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
-import React, { useEffect, useState } from 'react'
-import axios from 'axios'
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import { StyleSheet, Text, View, TouchableOpacity, FlatList } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useState, useContext } from 'react';
+import axios from 'axios';
+import { SessionContext } from '../../context/SessionContext'; // Adjust path as needed
 
 export default function MyenquiryDetails() {
-  const { title } = useLocalSearchParams()
-  const router = useRouter()
+  const { title, customer_id } = useLocalSearchParams();
+  const router = useRouter();
+  const { session } = useContext(SessionContext);
 
-  const [selectedStatus, setSelectedStatus] = useState(null)
-  const [enquiries, setEnquiries] = useState([])
-  const [userId, setUserId] = useState(null)
+  const [selectedStatus, setSelectedStatus] = useState(null);
+  const [enquiries, setEnquiries] = useState([]);
 
   const statusMap = {
     Pending: 0,
     Completed: 2,
     Rejected: 1,
-  }
-
-  useEffect(() => {
-    const loadUserId = async () => {
-      try {
-        const storedUserId = await AsyncStorage.getItem('userId')
-        console.log('Loaded userId:', storedUserId)
-        if (storedUserId) {
-          setUserId(storedUserId)
-        }
-      } catch (error) {
-        console.error('Error loading userId from AsyncStorage:', error)
-      }
-    }
-
-    loadUserId()
-  }, [])
+  };
 
   useEffect(() => {
     const fetchEnquiries = async () => {
-      if (!userId || selectedStatus === null) return
+      // Use either the customer_id from params or session.id
+      const userId = customer_id || (session && session.id);
+      if (!userId || selectedStatus === null) return;
 
       try {
-        const statusCode = statusMap[selectedStatus]
-        let url = ''
+        const statusCode = statusMap[selectedStatus];
+        let url = '';
 
         // API switching logic based on title
         if (title === 'real estate enquiry') {
-          url = `https://veebuilds.com/mobile/real_estate_enquiry_list.php?user_id=${userId}&status=${statusCode}`
+          url = `https://veebuilds.com/mobile/real_estate_enquiry_list.php?user_id=${userId}&status=${statusCode}`;
         } else if (title === 'Hire people enquiry') {
-          url = `https://veebuilds.com/mobile/hire_enquiry_list.php?user_id=${userId}&status=${statusCode}`
+          url = `https://veebuilds.com/mobile/hire_enquiry_list.php?user_id=${userId}&status=${statusCode}`;
         } else {
-          url = `https://veebuilds.com/mobile/my_enquery.php?user_id=${userId}&status=${statusCode}`
+          url = `https://veebuilds.com/mobile/my_enquery.php?user_id=${userId}&status=${statusCode}`;
         }
 
-        console.log('Fetching from URL:', url)
-        const response = await axios.get(url)
+        console.log('Fetching from URL:', url);
+        const response = await axios.get(url);
 
-        console.log('API Response:', response.data)
+        console.log('API Response:', response.data);
 
         if (response.data.success === 1 && Array.isArray(response.data.storeList)) {
-          setEnquiries(response.data.storeList)
+          setEnquiries(response.data.storeList);
         } else {
-          setEnquiries([])
+          setEnquiries([]);
         }
       } catch (error) {
-        console.error('Error fetching enquiry data:', error)
+        console.error('Error fetching enquiry data:', error);
+        setEnquiries([]);
       }
-    }
+    };
 
-    fetchEnquiries()
-  }, [selectedStatus, userId])
+    fetchEnquiries();
+  }, [selectedStatus, session, customer_id, title]);
 
   const renderEnquiryItem = ({ item }) => (
     <View style={styles.detailsBox}>
@@ -95,19 +82,16 @@ export default function MyenquiryDetails() {
         <Text style={styles.label}>Enquiry For</Text>
         <Text style={styles.value}>{item.product_name}</Text>
       </View>
-    
-          <View style={styles.row}>
-            <Text style={styles.label}>Enquiry To</Text>
-            <Text style={styles.value}>{item.vendor_name || 'N/A'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Message</Text>
-            <Text style={styles.value}>{item.message || 'N/A'}</Text>
-          </View>
-        
-   
+      <View style={styles.row}>
+        <Text style={styles.label}>Enquiry To</Text>
+        <Text style={styles.value}>{item.vendor_name || 'N/A'}</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={styles.label}>Message</Text>
+        <Text style={styles.value}>{item.message || 'N/A'}</Text>
+      </View>
     </View>
-  )
+  );
 
   return (
     <View style={{ flex: 1 }}>
@@ -165,7 +149,7 @@ export default function MyenquiryDetails() {
         )
       )}
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -177,46 +161,46 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
     justifyContent: 'space-between',
-    height: 120, // Reduced header height
+    height: 120,
   },
   backButton: {
     marginRight: 12,
-    marginTop: 35, // Adjusted position
+    marginTop: 35,
   },
   backIconContainer: {
-    padding: 6, // Smaller padding
+    padding: 6,
     top: 3,
   },
   headerText: {
-    fontSize: 18, // Smaller font size
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
     flex: 1,
     textAlign: 'left',
-    marginTop: 35, // Adjusted position
+    marginTop: 35,
   },
   statusContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 15, // Reduced margin
-    paddingHorizontal: 15, // Reduced padding
-    marginLeft: 5, // Reduced margin
+    marginTop: 15,
+    paddingHorizontal: 15,
+    marginLeft: 5,
   },
   statusButton: {
-    paddingVertical: 8, // Smaller padding
-    paddingHorizontal: 23, // Smaller padding
-    borderRadius: 5, // Slightly smaller radius
+    paddingVertical: 8,
+    paddingHorizontal: 23,
+    borderRadius: 5,
     backgroundColor: '#eee',
-    borderWidth: 1, // Thinner border
+    borderWidth: 1,
     borderColor: '#1789AE',
     marginHorizontal: 2,
-    right: 10, // Adjusted position
+    right: 10,
   },
   selectedStatusButton: {
     backgroundColor: '#1789AE',
   },
   statusButtonText: {
-    fontSize: 14, // Smaller font
+    fontSize: 14,
     color: '#333',
     fontWeight: 'bold',
   },
@@ -224,35 +208,35 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   detailsBox: {
-    marginTop: 15, // Reduced margin
-    marginHorizontal: 15, // Reduced margin
-    padding: 15, // Reduced padding
-    borderWidth: 1, // Thinner border
+    marginTop: 15,
+    marginHorizontal: 15,
+    padding: 15,
+    borderWidth: 1,
     borderColor: '#1789AE',
-    borderRadius: 8, // Slightly smaller radius
+    borderRadius: 8,
     backgroundColor: '#fff',
-    elevation: 3, // Reduced shadow
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 }, // Smaller shadow
-    shadowOpacity: 0.1, // Lighter shadow
-    shadowRadius: 3, // Smaller radius
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6, // Reduced spacing
-    paddingVertical: 2, // Reduced padding
+    marginBottom: 6,
+    paddingVertical: 2,
   },
   label: {
-    width: 110, // Slightly narrower
-    fontSize: 14, // Smaller font
+    width: 110,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'left',
   },
   value: {
     flex: 1,
-    fontSize: 14, // Smaller font
+    fontSize: 14,
     color: '#555',
     textAlign: 'right',
   },

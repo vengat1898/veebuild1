@@ -1,10 +1,10 @@
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, Image, ScrollView, ActivityIndicator } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { useEffect, useState, useContext } from 'react';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SessionContext } from '../../context/SessionContext';
 
 export default function Materials({ navigation }) {
   const [categories, setCategories] = useState([]);
@@ -12,98 +12,167 @@ export default function Materials({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [showTrending, setShowTrending] = useState(false);
   const router = useRouter();
-  const [userId, setUserId] = useState(null);
   
+  // Fix: Get userId from session.id instead of directly from context
+  const { session, isSessionLoaded } = useContext(SessionContext);
+  const userId = session?.id; // This is the correct way to get userId
+  
+  console.log('============= MATERIALS SCREEN RENDER =============');
+  console.log('Session:', session);
+  console.log('isSessionLoaded:', isSessionLoaded);
+  console.log('userId from session.id:', userId);
+  console.log('===================================================');
 
   // Fetch all categories
   const fetchCategories = async () => {
+    console.log('============= FETCHING CATEGORIES =============');
     try {
       setLoading(true);
       const response = await axios.get('https://veebuilds.com/mobile/category.php');
+      console.log('Categories API Response:', response.data);
+      
       if (response.data.result === 'Success') {
         setCategories(response.data.storeList);
-        console.log('====================================');
-        console.log(response.data.storeList);
-        console.log('====================================');
         setShowTrending(true);
+        console.log('Successfully loaded categories');
       } else {
         console.warn('Failed to fetch categories:', response.data.text);
+        Alert.alert('Error', 'Failed to load categories');
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
+      Alert.alert('Error', 'Failed to connect to server');
     } finally {
       setLoading(false);
+      console.log('Finished categories loading');
     }
+    console.log('===============================================');
   };
 
-  // Fetch main categories (the new one)
+  // Fetch main categories
   const fetchMainCategories = async () => {
+    console.log('============= FETCHING MAIN CATEGORIES =============');
     try {
       setLoading(true);
       const response = await axios.get('https://veebuilds.com/mobile/maincategory.php');
+      console.log('Main Categories API Response:', response.data);
+      
       if (response.data.result === 'Success') {
         setMainCategories(response.data.storeList);
+        console.log('Successfully loaded main categories');
       } else {
         console.warn('Failed to fetch main categories:', response.data.text);
       }
     } catch (error) {
       console.error('Error fetching main categories:', error.response ? error.response.data : error);
+      Alert.alert('Error', 'Failed to load main categories');
     } finally {
       setLoading(false);
+      console.log('Finished main categories loading');
     }
+    console.log('===================================================');
   };
 
   const fetchCategoryById = async (catId) => {
     if (!catId) {
+      console.warn('============= INVALID CATEGORY ID =============');
       console.warn('Invalid category ID:', catId);
       return;
     }
 
-    console.log('Fetching category with ID:', catId);
+    console.log('============= FETCHING CATEGORY BY ID =============');
+    console.log('Category ID:', catId);
 
     try {
       setLoading(true);
       const response = await axios.get(`https://veebuilds.com/mobile/cat.php?cat_id=${catId}`);
-      console.log(response.data);
+      console.log('Category API Response:', response.data);
 
       if (response.data.result === 'Success') {
         setCategories(response.data.storeList);
         setShowTrending(true);
+        console.log('Successfully loaded category data');
       } else if (response.data.text === 'List Empty!') {
         setCategories([]);
         setShowTrending(true);
-        console.warn('No materials found.');
+        console.warn('No materials found for this category');
+        Alert.alert('Info', 'No materials found in this category');
       } else {
         console.warn('Failed to fetch category data:', response.data.text);
+        Alert.alert('Error', 'Failed to load category data');
       }
     } catch (error) {
       console.error('Error fetching category data:', error.response ? error.response.data : error);
+      Alert.alert('Error', 'Failed to connect to server');
     } finally {
       setLoading(false);
+      console.log('Finished category loading');
     }
+    console.log('=================================================');
   };
-
- 
 
   useEffect(() => {
-  const getUserId = async () => {
-    try {
-      const id = await AsyncStorage.getItem('userId');
-      if (id) {
-        setUserId(id);
-        console.log('Loaded userId:', id);
-      } else {
-        console.warn('No userId found in AsyncStorage.');
-      }
-    } catch (error) {
-      console.error('Failed to load userId:', error);
+    console.log('============= COMPONENT MOUNTED =============');
+    fetchCategories();
+    fetchMainCategories();
+    console.log('=============================================');
+  }, []);
+
+  const handleCategoryPress = (item) => {
+    console.log('============= CATEGORY PRESSED =============');
+    console.log('Pressed category:', item);
+    console.log('Current userId:', userId);
+    console.log('Session loaded:', isSessionLoaded);
+    
+    // Wait for session to be loaded before checking userId
+    if (!isSessionLoaded) {
+      console.log('Session not loaded yet, waiting...');
+      return;
     }
+    
+    if (!userId) {
+      console.warn('No userId found - showing login prompt');
+      Alert.alert(
+        'Login Required',
+        'You need to login to view this category',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => console.log('User cancelled login')
+          },
+          {
+            text: 'Login',
+            onPress: () => {
+              console.log('User chose to login - navigating to login screen');
+              router.push('/components/Login');
+            }
+          }
+        ]
+      );
+      return;
+    }
+
+    console.log('Navigating to Shop screen with category:', item.id);
+    router.push({ 
+      pathname: '/components/Shop', 
+      params: { 
+        cat_id: item.id, 
+        customer_id: userId 
+      } 
+    });
+    console.log('============================================');
   };
 
-  fetchCategories();
-  fetchMainCategories();
-  getUserId(); // <-- Call the function
-}, []);
+  // Show loading indicator while session is being loaded
+  if (!isSessionLoaded) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#1789AE" />
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -127,7 +196,10 @@ export default function Materials({ navigation }) {
           placeholder="Search materials..."
           style={styles.searchInput}
           placeholderTextColor="#888"
-          onPress={() => router.push('/components/Search')}
+          onPressIn={() => {
+            console.log('Search input pressed');
+            router.push('/components/Search');
+          }}
         />
       </View>
 
@@ -135,18 +207,34 @@ export default function Materials({ navigation }) {
       <View style={styles.mainContent}>
         {/* Left Side: Main Categories List */}
         <View style={styles.boxContainer}>
-          <TouchableOpacity style={styles.boxButtonText} onPress={fetchCategories}>
+          <TouchableOpacity 
+            style={styles.boxButtonText} 
+            onPress={() => {
+              console.log('All categories button pressed');
+              fetchCategories();
+            }}
+          >
             <Text style={styles.buttonText}>All</Text>
           </TouchableOpacity>
 
-          <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            contentContainerStyle={styles.scrollContainer} 
+            showsVerticalScrollIndicator={false}
+          >
             {mainCategories.map((item, index) => (
               <TouchableOpacity
                 key={index}
                 style={styles.imageBox}
-                onPress={() => fetchCategoryById(item.id)}
+                onPress={() => {
+                  console.log('Main category pressed:', item.title);
+                  fetchCategoryById(item.id);
+                }}
               >
-                <Image source={{ uri: item.image }} style={styles.imageStyle} />
+                <Image 
+                  source={{ uri: item.image }} 
+                  style={styles.imageStyle} 
+                  onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+                />
                 <Text style={styles.imageLabel}>{item.title}</Text>
               </TouchableOpacity>
             ))}
@@ -160,7 +248,10 @@ export default function Materials({ navigation }) {
             {loading ? (
               <ActivityIndicator size="large" color="#1789AE" />
             ) : (
-              <ScrollView showsVerticalScrollIndicator={true} contentContainerStyle={styles.trendingImagesContainer}>
+              <ScrollView 
+                showsVerticalScrollIndicator={true} 
+                contentContainerStyle={styles.trendingImagesContainer}
+              >
                 {categories.map((item, index) => (
                   <LinearGradient
                     key={index}
@@ -170,17 +261,14 @@ export default function Materials({ navigation }) {
                     end={{ x: 1, y: 1 }}
                   >
                     <TouchableOpacity
-                        style={styles.trendingItem}
-                        onPress={() => {
-                        if (userId) {
-                        router.push({ pathname: '/components/Shop', params: { cat_id: item.id, customer_id: userId } });
-                        } else {
-                        Alert.alert('User ID not found', 'Please register or login again.');
-                       }
-                       }}
-                      > 
-
-                      <Image source={{ uri: item.image }} style={styles.trendingImage} />
+                      style={styles.trendingItem}
+                      onPress={() => handleCategoryPress(item)}
+                    > 
+                      <Image 
+                        source={{ uri: item.image }} 
+                        style={styles.trendingImage} 
+                        onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+                      />
                       <Text style={styles.trendingLabel}>{item.title}</Text>
                     </TouchableOpacity>
                   </LinearGradient>
@@ -196,6 +284,7 @@ export default function Materials({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
+  centerContent: { justifyContent: 'center', alignItems: 'center' },
   header: {
     height: 130,
     paddingTop: 40,
