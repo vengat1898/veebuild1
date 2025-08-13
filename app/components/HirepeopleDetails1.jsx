@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 10,
+    borderRadius: 4,
     padding: 16,
     alignItems: 'center',
     marginBottom: 20,
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 200,
     height: 200,
-    borderRadius: 10,
+    borderRadius: 4,
     backgroundColor: '#f0f0f0',
   },
   name: {
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
   photoImage: {
     width: '100%',
     height: 200,
-    borderRadius: 10,
+    borderRadius: 4,
     backgroundColor: '#f0f0f0',
   },
   buttonRow: {
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1789AE',
     paddingVertical: 10,
     paddingHorizontal: 18,
-    borderRadius: 10,
+    borderRadius: 4,
     minWidth: 100,
   },
   buttonText: {

@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 16,
     margin: 16,
-    borderRadius: 12,
+    borderRadius: 4,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   propertyImage: {
     width: '40%',
     height: 150,
-    borderRadius: 8,
+    borderRadius: 4,
     backgroundColor: "#f0f0f0",
   },
   placeholderImage: {
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1789AE',
     paddingVertical: 12,
     paddingHorizontal: 8,
-    borderRadius: 10,
+    borderRadius: 4,
     flex: 1,
     minHeight: 40,
     maxWidth: '32%',
