@@ -1531,7 +1531,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: wp(2),
     borderRadius: wp(1.5),
-    marginTop: 130,
+    marginBottom:100
   },
   mostEnquiredContainer: {  
     marginTop: hp(2),
