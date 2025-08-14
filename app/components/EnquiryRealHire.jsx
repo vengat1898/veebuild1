@@ -5,7 +5,6 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Alert,
   Platform,
   ActivityIndicator,
@@ -15,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SessionContext } from '../../context/SessionContext';
 import axios from 'axios';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function EnquiryRealHire() {
   const router = useRouter();
@@ -39,43 +39,18 @@ export default function EnquiryRealHire() {
 
   useEffect(() => {
     if (isSessionLoaded && session) {
-      console.log('Session loaded:', session);
-      
-      // Set user details from session
       setName(session.name || '');
       setMobile(session.mobile || '');
       setCity(session.city || professionalCity || '');
-      
-      console.log('Enquiry Parameters:', {
-        cat_id,
-        land_id,
-        v_id,
-        product_name,
-        professionalCity,
-        customer_id,
-        user_id,
-        sessionUserId: session.id
-      });
     }
   }, [isSessionLoaded, session]);
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
     
-    if (!v_id) {
-      Alert.alert('Error', 'Vendor information is missing');
-      return;
-    }
-
-    if (!message) {
-      Alert.alert('Error', 'Please enter your enquiry message');
-      return;
-    }
-
-    if (!session?.id) {
-      Alert.alert('Error', 'User session not found. Please login again.');
-      return;
-    }
+    if (!v_id) return Alert.alert('Error', 'Vendor information is missing');
+    if (!message) return Alert.alert('Error', 'Please enter your enquiry message');
+    if (!session?.id) return Alert.alert('Error', 'User session not found. Please login again.');
 
     setIsSubmitting(true);
     
@@ -87,20 +62,15 @@ export default function EnquiryRealHire() {
       message: message.trim(),
       product_name: product_name || `${name} - ${city || 'No city specified'}`,
       vendor_id: v_id,
-      city: city.trim() || 'Not specified', // Make city optional with fallback
+      city: city.trim() || 'Not specified',
       land_id: land_id || '',
       cat_id: cat_id || ''
     };
 
-    console.log('Submitting enquiry with params:', enquiryParams);
-
     try {
-      const enquiryUrl = 'https://veebuilds.com/mobile/land_enquery.php';
-      const response = await axios.get(enquiryUrl, {
+      const response = await axios.get('https://veebuilds.com/mobile/land_enquery.php', {
         params: enquiryParams
       });
-
-      console.log('API Response:', response.data);
 
       if (response.data.success === 1 || response.data.result === 'success') {
         Alert.alert('Success', response.data.message || 'Enquiry submitted successfully', [
@@ -120,17 +90,12 @@ export default function EnquiryRealHire() {
           }
         ]);
       } else {
-        const errorMessage = response.data.text || response.data.message || 'Something went wrong';
-        Alert.alert('Failed', errorMessage);
+        Alert.alert('Failed', response.data.text || response.data.message || 'Something went wrong');
       }
     } catch (error) {
-      console.error('Submission Error:', error);
       let errorMessage = 'Submission failed. Please try again.';
       if (error.response) {
-        errorMessage = error.response.data.text || 
-                     error.response.data.message || 
-                     errorMessage;
-        console.error('Error Details:', error.response.data);
+        errorMessage = error.response.data.text || error.response.data.message || errorMessage;
       }
       Alert.alert('Error', errorMessage);
     } finally {
@@ -152,7 +117,12 @@ export default function EnquiryRealHire() {
         <Text style={styles.headerText}>Enquiry</Text>
       </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.container}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.container}
+        enableOnAndroid
+        extraScrollHeight={Platform.OS === 'ios' ? 60 : 80}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.label}>Name</Text>
         <TextInput
           style={styles.input}
@@ -171,15 +141,6 @@ export default function EnquiryRealHire() {
           onChangeText={setMobile}
           editable={false}
         />
-
-        {/* Optional City Field - Uncomment if you want to show it */}
-        {/* <Text style={styles.label}>City (Optional)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your city (optional)"
-          value={city}
-          onChangeText={setCity}
-        /> */}
 
         <Text style={styles.label}>Message*</Text>
         <TextInput
@@ -202,7 +163,7 @@ export default function EnquiryRealHire() {
             <Text style={styles.submitText}>Submit Enquiry</Text>
           )}
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
@@ -258,5 +219,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+
 
 

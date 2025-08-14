@@ -5,7 +5,6 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Alert,
   Platform,
   ActivityIndicator,
@@ -15,13 +14,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SessionContext } from '../../context/SessionContext';
 import axios from 'axios';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function HirepeopleEnquiry() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { session, isSessionLoaded } = useContext(SessionContext);
 
-  // Destructure parameters
   const { 
     cat_id, 
     land_id, 
@@ -40,67 +39,36 @@ export default function HirepeopleEnquiry() {
 
   useEffect(() => {
     if (isSessionLoaded && session) {
-      console.log('Session loaded:', session);
-      
-      // Set user details from session
       setName(session.name || '');
       setMobile(session.mobile || '');
       setCity(session.city || professionalCity || '');
-      
-      // Log all parameters for debugging
-      console.log('Enquiry Parameters:', {
-        cat_id,
-        land_id,
-        v_id,
-        product_name,
-        professionalCity,
-        customer_id,
-        user_id,
-        sessionUserId: session.id
-      });
     }
   }, [isSessionLoaded, session]);
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
-    
-    if (!product_name) {
-      Alert.alert('Error', 'Professional information is missing');
-      return;
-    }
-
-    if (!city) {
-      Alert.alert('Error', 'Please enter your city');
-      return;
-    }
-
-    if (!session?.id) {
-      Alert.alert('Error', 'User session not found. Please login again.');
-      return;
-    }
+    if (!product_name) return Alert.alert('Error', 'Professional information is missing');
+    if (!city) return Alert.alert('Error', 'Please enter your city');
+    if (!session?.id) return Alert.alert('Error', 'User session not found. Please login again.');
 
     setIsSubmitting(true);
-    
+
     const enquiryParams = {
-      user_id: session.id, // Using session user ID
+      user_id: session.id,
       customer_id: customer_id || '',
       name: name.trim(),
       mobile: mobile.trim(),
       message: message.trim(),
-      product_name: product_name.trim(), // Professional's name
-      vendor_id: v_id || land_id || '', // Using either v_id or land_id
+      product_name: product_name.trim(),
+      vendor_id: v_id || land_id || '',
       city: city.trim(),
       cat_id: cat_id || ''
     };
-
-    console.log('Submitting enquiry with params:', enquiryParams);
 
     try {
       const response = await axios.get('https://veebuilds.com/mobile/professional_enquery.php', {
         params: enquiryParams
       });
-
-      console.log('API Response:', response.data);
 
       if (response.data.success === 1) {
         Alert.alert('Success', 'Enquiry submitted successfully', [
@@ -123,11 +91,9 @@ export default function HirepeopleEnquiry() {
         Alert.alert('Failed', response.data.text || 'Something went wrong');
       }
     } catch (error) {
-      console.error('Submission Error:', error);
       let errorMessage = 'Submission failed. Please try again.';
       if (error.response) {
         errorMessage = error.response.data.text || errorMessage;
-        console.error('Error Details:', error.response.data);
       }
       Alert.alert('Error', errorMessage);
     } finally {
@@ -149,14 +115,19 @@ export default function HirepeopleEnquiry() {
         <Text style={styles.headerText}>Enquiry</Text>
       </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.container}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.container}
+        enableOnAndroid
+        extraScrollHeight={Platform.OS === 'ios' ? 60 : 80} 
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.label}>Name</Text>
         <TextInput
           style={styles.input}
           placeholder="Enter your name"
           value={name}
           onChangeText={setName}
-          editable={!!session?.name} // Disable if we have session name
+          editable={!session?.name}
         />
 
         <Text style={styles.label}>Mobile Number</Text>
@@ -166,16 +137,8 @@ export default function HirepeopleEnquiry() {
           value={mobile}
           keyboardType="phone-pad"
           onChangeText={setMobile}
-          editable={!!session?.mobile} // Disable if we have session mobile
+          editable={!session?.mobile}
         />
-
-        {/* <Text style={styles.label}>City</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your city"
-          value={city}
-          onChangeText={setCity}
-        /> */}
 
         <Text style={styles.label}>Message</Text>
         <TextInput
@@ -198,7 +161,7 @@ export default function HirepeopleEnquiry() {
             <Text style={styles.submitText}>Submit Enquiry</Text>
           )}
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
@@ -254,6 +217,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+
+
 
 
 
