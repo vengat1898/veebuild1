@@ -169,13 +169,13 @@ export default function HirepeopleEnquiry() {
           editable={!!session?.mobile} // Disable if we have session mobile
         />
 
-        <Text style={styles.label}>City</Text>
+        {/* <Text style={styles.label}>City</Text>
         <TextInput
           style={styles.input}
           placeholder="Enter your city"
           value={city}
           onChangeText={setCity}
-        />
+        /> */}
 
         <Text style={styles.label}>Message</Text>
         <TextInput
