@@ -1,22 +1,21 @@
+import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
-  Image,
-  ScrollView,
-  ActivityIndicator,
-  Linking,
-  Alert,
-  Platform,
-  StatusBar,
   useWindowDimensions,
+  View
 } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import axios from 'axios';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Shopdetails() {

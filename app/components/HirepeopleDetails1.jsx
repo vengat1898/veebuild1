@@ -1,17 +1,19 @@
+import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
-  Image,
-  ScrollView,
-  ActivityIndicator,
+  View
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 
 export default function HirepeopleDetails1() {
   const router = useRouter();
@@ -24,6 +26,26 @@ export default function HirepeopleDetails1() {
   const [loading, setLoading] = useState(!parsedData.id);
   const [imgError, setImgError] = useState(false);
   const [activeTab, setActiveTab] = useState('Quick Info');
+
+
+
+  const handleCallPress = () => {
+  if (person.mobile) {
+    Linking.openURL(`tel:${person.mobile}`);
+  } else {
+    Alert.alert('Error', 'Phone number not available');
+  }
+};
+
+const handleWhatsAppPress = () => {
+  if (person.mobile) {
+    // Note: WhatsApp requires phone number in international format without '+' or '0'
+    const phoneNumber = person.mobile.replace(/^\+?0?/, '');
+    Linking.openURL(`https://wa.me/${phoneNumber}`);
+  } else {
+    Alert.alert('Error', 'Phone number not available');
+  }
+};
 
   const getImageUrl = () => {
     if (!person?.aatharimage || person.aatharimage.endsWith('/')) {
@@ -187,10 +209,16 @@ export default function HirepeopleDetails1() {
       </ScrollView>
 
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.button}>
+        {/* <TouchableOpacity style={styles.button}>
           <Ionicons name="call" size={16} color="white" style={styles.icon} />
           <Text style={styles.buttonText}>Call</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
+
+        <TouchableOpacity style={styles.button} onPress={handleCallPress}>
+  <Ionicons name="call" size={16} color="white" style={styles.icon} />
+  <Text style={styles.buttonText}>Call</Text>
+</TouchableOpacity>
+
 
         <TouchableOpacity
           style={styles.button}
@@ -200,10 +228,15 @@ export default function HirepeopleDetails1() {
           <Text style={styles.buttonText}>Enquiry</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button}>
+        {/* <TouchableOpacity style={styles.button}>
           <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
           <Text style={styles.buttonText}>WhatsApp</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
+
+        <TouchableOpacity style={styles.button} onPress={handleWhatsAppPress}>
+  <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
+  <Text style={styles.buttonText}>WhatsApp</Text>
+</TouchableOpacity>
       </View>
     </View>
   );
@@ -355,7 +388,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 22,
     backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#eee',
@@ -363,6 +396,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    
   },
   button: {
     flexDirection: 'row',
@@ -373,6 +407,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: 4,
     minWidth: 100,
+    marginBottom:20
   },
   buttonText: {
     color: 'white',

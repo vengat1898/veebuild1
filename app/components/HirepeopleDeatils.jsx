@@ -1,17 +1,21 @@
+import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
   FlatList,
   Image,
-  ActivityIndicator,
+  Linking,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+
+
 
 export default function HirepeopleDetails() {
   const router = useRouter();
@@ -41,6 +45,24 @@ export default function HirepeopleDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [imageErrors, setImageErrors] = useState({});
+
+  const handleCallPress = (mobileNumber) => {
+  if (mobileNumber) {
+    Linking.openURL(`tel:${mobileNumber}`);
+  } else {
+    Alert.alert('Error', 'Phone number not available');
+  }
+};
+
+const handleWhatsAppPress = (mobileNumber) => {
+  if (mobileNumber) {
+    // Note: WhatsApp requires phone number in international format without '+' or '0'
+    const phoneNumber = mobileNumber.replace(/^\+?0?/, '');
+    Linking.openURL(`https://wa.me/${phoneNumber}`);
+  } else {
+    Alert.alert('Error', 'Phone number not available');
+  }
+};
 
   const handleImageError = (id) => {
     console.log('=================== IMAGE ERROR ===================');
@@ -239,7 +261,7 @@ export default function HirepeopleDetails() {
         </View>
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity 
+          {/* <TouchableOpacity 
             style={styles.button}
             onPress={() => {
               console.log('=================== CALL BUTTON PRESSED ===================');
@@ -251,7 +273,23 @@ export default function HirepeopleDetails() {
           >
             <Ionicons name="call" size={16} color="white" style={styles.icon} />
             <Text style={styles.buttonText}>Call</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
+
+          <TouchableOpacity 
+  style={styles.button}
+  onPress={() => {
+    console.log('=================== CALL BUTTON PRESSED ===================');
+    console.log('Item ID:', item.id);
+    console.log('Item Name:', item.name);
+    console.log('Phone Number:', item.mobile);
+    console.log('===========================================================');
+    console.log('');
+    handleCallPress(item.mobile);
+  }}
+>
+  <Ionicons name="call" size={16} color="white" style={styles.icon} />
+  <Text style={styles.buttonText}>Call</Text>
+</TouchableOpacity>
 
           <TouchableOpacity
             style={styles.button}
@@ -284,7 +322,7 @@ export default function HirepeopleDetails() {
             <Text style={styles.buttonText}>Enquiry</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          {/* <TouchableOpacity 
             style={styles.button}
             onPress={() => {
               console.log('=================== WHATSAPP BUTTON PRESSED ===================');
@@ -296,7 +334,23 @@ export default function HirepeopleDetails() {
           >
             <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
             <Text style={styles.buttonText}>WhatsApp</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
+
+          <TouchableOpacity 
+  style={styles.button}
+  onPress={() => {
+    console.log('=================== WHATSAPP BUTTON PRESSED ===================');
+    console.log('Item ID:', item.id);
+    console.log('Item Name:', item.name);
+    console.log('Phone Number:', item.mobile);
+    console.log('===============================================================');
+    console.log('');
+    handleWhatsAppPress(item.mobile);
+  }}
+>
+  <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
+  <Text style={styles.buttonText}>WhatsApp</Text>
+</TouchableOpacity>
         </View>
       </View>
     );

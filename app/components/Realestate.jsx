@@ -1,17 +1,19 @@
+import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Linking,
   StyleSheet,
   Text,
-  View,
+  TextInput,
   TouchableOpacity,
-  Image,
-  FlatList,
-  ActivityIndicator,
-  TextInput
+  View
 } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import axios from 'axios';
 
 export default function Realestate() {
   const [realEstateData, setRealEstateData] = useState([]);
@@ -27,6 +29,46 @@ export default function Realestate() {
   console.log('=== COMPONENT INITIALIZED ===');
   console.log('Parameters:', { cat_id, customer_id });
   console.log('Router params:', params);
+
+  const handleCallPress = (mobileNumber) => {
+  console.log('=== CALL FUNCTION ===');
+  console.log('Attempting to call:', mobileNumber);
+  
+  if (mobileNumber) {
+    Linking.openURL(`tel:${mobileNumber}`)
+      .then(() => console.log('Call initiated successfully'))
+      .catch(err => {
+        console.error('Error initiating call:', err);
+        Alert.alert('Error', 'Could not initiate call');
+      });
+  } else {
+    console.log('No mobile number available');
+    Alert.alert('Error', 'Phone number not available');
+  }
+};
+
+const handleWhatsAppPress = (mobileNumber) => {
+  console.log('=== WHATSAPP FUNCTION ===');
+  console.log('Attempting to open WhatsApp for:', mobileNumber);
+  
+  if (mobileNumber) {
+    // Clean the phone number (remove +, 0, spaces, etc.)
+    const cleanedNumber = mobileNumber.replace(/^\+?0?|\s+/g, '');
+    const whatsappUrl = `https://wa.me/${cleanedNumber}`;
+    
+    console.log('WhatsApp URL:', whatsappUrl);
+    
+    Linking.openURL(whatsappUrl)
+      .then(() => console.log('WhatsApp opened successfully'))
+      .catch(err => {
+        console.error('Error opening WhatsApp:', err);
+        Alert.alert('Error', 'Could not open WhatsApp');
+      });
+  } else {
+    console.log('No mobile number available');
+    Alert.alert('Error', 'Phone number not available');
+  }
+};
 
   useEffect(() => {
     const fetchData = async () => {
@@ -211,7 +253,7 @@ export default function Realestate() {
         </View>
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity 
+          {/* <TouchableOpacity 
             style={styles.button}
             onPress={() => {
               console.log('=== CALL BUTTON ===');
@@ -221,7 +263,20 @@ export default function Realestate() {
           >
             <Ionicons name="call" size={16} color="white" style={styles.icon} />
             <Text style={styles.buttonText}>Call</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
+
+          <TouchableOpacity 
+  style={styles.button}
+  onPress={() => {
+    console.log('=== CALL BUTTON ===');
+    console.log('Call button pressed for item:', item.id);
+    console.log('Vendor mobile number:', item.vendor_mobile);
+    handleCallPress(item.vendor_mobile);
+  }}
+>
+  <Ionicons name="call" size={16} color="white" style={styles.icon} />
+  <Text style={styles.buttonText}>Call</Text>
+</TouchableOpacity>
 
           <TouchableOpacity
             style={styles.button}
@@ -245,7 +300,7 @@ export default function Realestate() {
             <Text style={styles.buttonText}>Enquiry</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          {/* <TouchableOpacity 
             style={styles.button}
             onPress={() => {
               console.log('=== WHATSAPP BUTTON ===');
@@ -255,7 +310,20 @@ export default function Realestate() {
           >
             <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
             <Text style={styles.buttonText}>WhatsApp</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
+
+          <TouchableOpacity 
+  style={styles.button}
+  onPress={() => {
+    console.log('=== WHATSAPP BUTTON ===');
+    console.log('WhatsApp button pressed for item:', item.id);
+    console.log('Vendor mobile number:', item.vendor_mobile);
+    handleWhatsAppPress(item.vendor_mobile);
+  }}
+>
+  <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
+  <Text style={styles.buttonText}>WhatsApp</Text>
+</TouchableOpacity>
         </View>
       </View>
     );

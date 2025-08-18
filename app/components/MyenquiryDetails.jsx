@@ -1,9 +1,9 @@
-import { StyleSheet, Text, View, TouchableOpacity, FlatList } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useContext, useEffect, useState } from 'react';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SessionContext } from '../../context/SessionContext'; // Adjust path as needed
 
 export default function MyenquiryDetails() {
@@ -104,7 +104,7 @@ export default function MyenquiryDetails() {
       >
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <View style={styles.backIconContainer}>
-            <Ionicons name="arrow-back" size={20} color="#fff" />
+            <Ionicons name="arrow-back" size={30} color="#fff" />
           </View>
         </TouchableOpacity>
         <Text style={styles.headerText}>{title}</Text>

@@ -3,13 +3,13 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import Checkbox from 'expo-checkbox';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState , useContext } from 'react';
-import { SessionContext } from '../../context/SessionContext';
+import { useContext, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Image,
+  Linking,
   Modal,
   ScrollView,
   StyleSheet,
@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { SessionContext } from '../../context/SessionContext';
 
 export default function Shop() {
   const { session } = useContext(SessionContext);
@@ -41,6 +42,46 @@ export default function Shop() {
   const [selectedBrands, setSelectedBrands] = useState([]);
   const { cat_id, customer_id: paramCustomerId } = params;
   const customer_id = paramCustomerId || session?.id;
+
+  const handleCallPress = (mobileNumber) => {
+  console.log('=== CALL FUNCTION ===');
+  console.log('Attempting to call:', mobileNumber);
+  
+  if (mobileNumber) {
+    Linking.openURL(`tel:${mobileNumber}`)
+      .then(() => console.log('Call initiated successfully'))
+      .catch(err => {
+        console.error('Error initiating call:', err);
+        Alert.alert('Error', 'Could not initiate call');
+      });
+  } else {
+    console.log('No mobile number available');
+    Alert.alert('Error', 'Phone number not available');
+  }
+};
+
+const handleWhatsAppPress = (whatsappNumber) => {
+  console.log('=== WHATSAPP FUNCTION ===');
+  console.log('Attempting to open WhatsApp for:', whatsappNumber);
+  
+  if (whatsappNumber) {
+    // Clean the phone number (remove +, 0, spaces, etc.)
+    const cleanedNumber = whatsappNumber.replace(/^\+?0?|\s+/g, '');
+    const whatsappUrl = `https://wa.me/${cleanedNumber}`;
+    
+    console.log('WhatsApp URL:', whatsappUrl);
+    
+    Linking.openURL(whatsappUrl)
+      .then(() => console.log('WhatsApp opened successfully'))
+      .catch(err => {
+        console.error('Error opening WhatsApp:', err);
+        Alert.alert('Error', 'Could not open WhatsApp');
+      });
+  } else {
+    console.log('No WhatsApp number available');
+    Alert.alert('Error', 'WhatsApp number not available');
+  }
+};
 
   console.log('=============================================================');
   console.log('Final cat_id:', cat_id);
@@ -439,7 +480,7 @@ export default function Shop() {
           </View>
         </View>
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.button} onPress={() => {
+          {/* <TouchableOpacity style={styles.button} onPress={() => {
             console.log('=============================================================');
             console.log('CALL BUTTON PRESSED');
             console.log('Mobile number:', item.mobile);
@@ -453,7 +494,21 @@ export default function Shop() {
           }}>
             <Ionicons name="call" size={16} color="white" style={styles.icon} />
             <Text style={styles.buttonText}>Call</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
+
+          <TouchableOpacity 
+  style={styles.button} 
+  onPress={() => {
+    console.log('=============================================================');
+    console.log('CALL BUTTON PRESSED');
+    console.log('Mobile number:', item.mobile);
+    console.log('=============================================================');
+    handleCallPress(item.mobile);
+  }}
+>
+  <Ionicons name="call" size={16} color="white" style={styles.icon} />
+  <Text style={styles.buttonText}>Call</Text>
+</TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.button} 
@@ -473,7 +528,7 @@ export default function Shop() {
             <Text style={styles.buttonText}>Enquiry</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.button} onPress={() => {
+          {/* <TouchableOpacity style={styles.button} onPress={() => {
             console.log('=============================================================');
             console.log('WHATSAPP BUTTON PRESSED');
             console.log('WhatsApp number:', item.whatsapp);
@@ -487,7 +542,21 @@ export default function Shop() {
           }}>
             <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
             <Text style={styles.buttonText}>WhatsApp</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
+
+          <TouchableOpacity 
+  style={styles.button} 
+  onPress={() => {
+    console.log('=============================================================');
+    console.log('WHATSAPP BUTTON PRESSED');
+    console.log('WhatsApp number:', item.whatsapp);
+    console.log('=============================================================');
+    handleWhatsAppPress(item.whatsapp);
+  }}
+>
+  <Ionicons name="logo-whatsapp" size={16} color="white" style={styles.icon} />
+  <Text style={styles.buttonText}>WhatsApp</Text>
+</TouchableOpacity>
         </View>
       </View>
     );

@@ -1,12 +1,11 @@
-import { StyleSheet, Text, View, TouchableOpacity, Image, Pressable } from 'react-native';
-import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useContext } from 'react';
+import { useContext } from 'react';
+import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import material from '../../assets/images/hirepeople.png';
+import { default as hirepeople, default as material } from '../../assets/images/hirepeople.png';
 import realestate from '../../assets/images/real.png';
-import hirepeople from '../../assets/images/hirepeople.png';
 import { SessionContext } from '../../context/SessionContext'; // Adjust path as needed
 
 export default function Myenquiry() {
@@ -37,7 +36,7 @@ export default function Myenquiry() {
         end={{ x: 1, y: 1 }}
       >
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={34} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerText}>MyEnquiry</Text>
       </LinearGradient>
